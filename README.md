@@ -9,11 +9,18 @@ How to install: run "make"; installs to local directory
 to run, run ./tempsafe from the install directory
 
 Usage: 
+
 -p	 Path to lm-sensors config file
+
 -w	 time interval to wait between checks (seconds); default is 5 seconds
+
 -T	 Load temperatures from a file
+
 -i	 Don't run, just print temperatures and exit (implies -v)
+
 -v	 Verbose output (print temperatures at each TIME interval)
+
 -C	 execute a shell script; 
     		 SCRIPT path should be given in double-quotes.
+    		 
 -h	 Print this help file
