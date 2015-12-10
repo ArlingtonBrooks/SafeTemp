@@ -16,6 +16,9 @@ Usage:
 
 -T	 Load temperatures from a file
 
+-s   Print estimates for maximum temperature and time until maximum temperature
+        (VERY rough -- shouldn't be trusted for anything important)
+
 -i	 Don't run, just print temperatures and exit (implies -v)
 
 -v	 Verbose output (print temperatures at each TIME interval)
