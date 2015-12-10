@@ -5,6 +5,8 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <time.h>
+#include <cmath>
 #include <sensors/sensors.h>
 #include <sensors/error.h>
 
@@ -14,6 +16,7 @@ using namespace std;
 Global Variables
 */
 int TimeStep = 5000000;
+time_t StartTime = time(NULL);
 vector<double> MaxTemps;
 double MinTemp;
 FILE *File = NULL;
@@ -21,13 +24,18 @@ FILE *Temp = NULL;
 FILE *Prog = NULL;
 bool run = 1;
 bool PrtTmp = 0;
+bool Stats = 0;
 string Command = "";
 
-string helptext = "sensor-check -p FILE -w TIME -i -v -T FILE -C SCRIPT \nsensors-checking program\nKevin Brooks, 2015\nUsage: \n-p\t Path to lm-sensors config file\n-w\t time interval to wait between checks (seconds); default is 5 seconds\n-T\t Load temperatures from a file\n-i\t Don't run, just print temperatures and exit (implies -v)\n-v\t Verbose output (print temperatures at each TIME interval)\n-C\t execute a shell script; \n\t\t SCRIPT path should be given in double-quotes.\n-h\t Print this help file\n\n";
+string helptext = "tempsafe -p FILE -w TIME -i -v -f FILE -C SCRIPT \nsensors-checking program\nKevin Brooks, 2015\nUsage: \n-p\t Path to lm-sensors config file\n-w\t time interval to wait between checks (seconds); default is 5 seconds\n-s\t Calculate statistics (when possible) and give information as to when the max temperature will be reached, and what that maximum temperature might be\n\t\t NOTE: this is VERY rough and shouldn't be trusted for anything critical.\n-f\t Load temperatures from a file\n-i\t Don't run, just print temperatures and exit (implies -v)\n-v\t Verbose output (print temperatures at each TIME interval)\n-C\t execute a shell script; \n\t\t SCRIPT path should be given in double-quotes.\n-h\t Print this help file\n\n";
 
 bool ProcessArgs(int, char**);
 bool ParseTemp();
 bool ProcessTemp(int,double);
+double deriv(double,double);
+double avg(double, double);
+double EstMaxTemp(vector<double>, vector<double>, vector<double>, vector<time_t>);
+double EstMaxTime(vector<double>, vector<double>, vector<double>, vector<time_t>);
 
 int main(int argc,char** argv)
 {
@@ -37,6 +45,13 @@ int main(int argc,char** argv)
         printf(helptext.c_str());
         return -3;
     }
+
+    //The following is for the stats option
+    vector<vector<time_t>> X_pts;
+    vector<vector<double>> Y_pts;
+    vector<vector<double>> Yp_pts;
+    vector<vector<double>> Ypp_pts;
+
     int ERR,ChipNo,FeatNo;
     ChipNo = 0;
     bool running = 1;
@@ -78,12 +93,30 @@ int main(int argc,char** argv)
     if (ChipNames.size() == ChipFeats.size() && ChipFeats.size() == SubFeats.size())
     {
         double val;
+        
+        double MaxTemp[ChipNames.size()];
+        double MaxTime[ChipNames.size()];
+        if (Stats)
+        {
+            X_pts.resize(ChipNames.size());
+            Y_pts.resize(ChipNames.size());
+            Yp_pts.resize(ChipNames.size());
+            Ypp_pts.resize(ChipNames.size());
+        }
+
         while (true)
         {
             for (int i = 0; i < ChipNames.size(); i++)
             {
                 sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
+                if (Stats) X_pts[i].push_back(time(NULL));
+                if (Stats) Y_pts[i].push_back(val);
+                if (Stats && Y_pts[i].size() >= 2) Yp_pts[i].push_back(deriv(Y_pts[i][Y_pts.size()-2],Y_pts[i][Y_pts[i].size()-1]));
+                if (Stats && Yp_pts[i].size() >= 2) Ypp_pts[i].push_back(deriv(Yp_pts[i][Yp_pts.size()-2],Yp_pts[i][Yp_pts[i].size()-1]));
+                if (Stats) MaxTemp[i] = EstMaxTemp(Y_pts[i],Yp_pts[i],Ypp_pts[i],X_pts[i]);
+                if (Stats) MaxTime[i] = EstMaxTime(Y_pts[i],Yp_pts[i],Ypp_pts[i],X_pts[i]);
                 if (PrtTmp) printf("Sensor %d: %f\n",i,val);
+                if (PrtTmp && Stats && Ypp_pts[i].size() >= 1) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[i],MaxTime[i],i);
                 ProcessTemp(i,val); 
                     //TODO: we should have this execute a user-specified command
             }
@@ -122,7 +155,7 @@ bool ProcessArgs(int argc, char** argv)
         else if (strcmp(argv[i],"-h") == 0) {printf(helptext.c_str()); run = 0;}
         else if (strcmp(argv[i],"-w") == 0) {TimeStep = (stoi(argv[i+1])*1000000); i++;}
         else if (strcmp(argv[i],"-i") == 0) {run = 0; PrtTmp = 1;}
-        else if (strcmp(argv[i],"-T") == 0) 
+        else if (strcmp(argv[i],"-f") == 0) 
         {
             Temp = fopen(argv[i+1],"r"); 
             i++;
@@ -134,6 +167,7 @@ bool ProcessArgs(int argc, char** argv)
         }
         else if (strcmp(argv[i],"-v") == 0) PrtTmp = 1;
         else if (strcmp(argv[i],"-C") == 0) {Command = (string)argv[i+1]; i++;}
+        else if (strcmp(argv[i],"-s") == 0) Stats = 1;
         else if (argv[i][0] == '-')
         {
             for (int j = 1; j < string(argv[i]).length(); j++) 
@@ -142,7 +176,7 @@ bool ProcessArgs(int argc, char** argv)
                 else if (argv[i][j] == 'h') {printf(helptext.c_str()); run = 0;}
                 else if (argv[i][j] == 'w') {TimeStep = (stoi(argv[i+1])*1000000); i++;}
                 else if (argv[i][j] == 'i') {run = 0; PrtTmp = 1;}
-                else if (strcmp(argv[i],"T") == 0) 
+                else if (strcmp(argv[i],"f") == 0) 
                 {
                     Temp = fopen(argv[i+1],"r"); 
                     i++;
@@ -154,6 +188,7 @@ bool ProcessArgs(int argc, char** argv)
                 }
                 else if (argv[i][j] == 'v') PrtTmp = 1;
                 else if (argv[i][j] == 'C') {Command = (string)argv[i+1]; i++;}
+                else if (argv[i][j] == 's') Stats = 1;
                 else return 0;
             }
         }
@@ -223,4 +258,57 @@ bool ProcessTemp(int index,double value)
         }
         else return 1;
     }
+};
+
+double deriv(double y1, double y2)
+{
+    if (TimeStep != 0)
+    {
+        return (y2 - y1)/((float)TimeStep/1000000.0);
+    }
+    else return 0;
+};
+
+double avg(double x1, double x2)
+{
+    return (x1+x2)/2;
+};
+
+/*
+Estimate the 98% temperature estimating an exponential function T = a+b*e^(c*t)
+	if time constant is -1/c, then -4/c SHOULD be our equilibrium time.
+		(active word: SHOULD)
+*/
+double EstMaxTemp(vector<double> y, vector<double> yp, vector<double> ypp, vector<time_t> t)
+{
+    if (y.size() < 3 || yp.size() < 2 || ypp.size() < 1 || t.size() < 3) return 0;
+    if (ypp[ypp.size()-1] == 0 || avg(yp[yp.size()-2],yp[yp.size()-1]) == 0) return  y[y.size()-1]; //suggests maximum
+
+    double x = (float)t[t.size()-2] - (float)StartTime;
+    double c = ypp[ypp.size()-1]/avg(yp[yp.size()-2],yp[yp.size()-1]);
+    if (c == 0) {return y[y.size()-1];}
+    double b = avg(yp[yp.size()-2],yp[yp.size()-1])/(c*exp(c*x));
+    if (b == 0) {return y[y.size()-1];}
+    double a = y[y.size()-2] - b*exp(c*x);
+
+    //Tmax occurs as t -> inf, so if c is negative, Tmax -> a.  If c = 0 or b = 0: we're likely at maximum
+    if (c < 0) return a;
+    else return y[y.size()-1]; //we're likely just at startup if this happens; result is unreliable
+};
+
+double EstMaxTime(vector<double> y, vector<double> yp, vector<double> ypp, vector<time_t> t)
+{
+    if (y.size() < 3 || yp.size() < 2 || ypp.size() < 1 || t.size() < 3) return 0;
+    if (ypp[ypp.size()-1] == 0 || avg(yp[yp.size()-2],yp[yp.size()-1]) == 0) return 0; //suggests maximum
+
+    double x = (float)t[t.size()-2] - (float)StartTime;
+    double c = ypp[ypp.size()-1]/avg(yp[yp.size()-2],yp[yp.size()-1]);
+    if (c == 0) return 0;
+    double b = avg(yp[yp.size()-2],yp[yp.size()-1])/(c*exp(c*x));
+    if (b == 0) return 0;
+    double a = y[y.size()-2] - b*exp(c*x);
+
+    //Tmax occurs as t -> inf, so if c is negative, Tmax -> a.  If c = 0 or b = 0: we're likely at maximum
+    if (c > 0) return 0;
+    else return -(4.0/c) + (float)x;
 };
