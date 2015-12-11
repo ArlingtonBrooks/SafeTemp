@@ -17,7 +17,8 @@ Usage:
 -T	 Load temperatures from a file
 
 -s   Print estimates for maximum temperature and time until maximum temperature
-        (VERY rough -- shouldn't be trusted for anything important)
+        (VERY rough -- shouldn't be trusted for anything important)     
+        Technically this function has not yet been implemented.
 
 -i	 Don't run, just print temperatures and exit (implies -v)
 
