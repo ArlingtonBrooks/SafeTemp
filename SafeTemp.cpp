@@ -7,8 +7,15 @@
 #include <vector>
 #include <time.h>
 #include <cmath>
+#include <config.h>
+#if HAVE_LIBSENSORS
 #include <sensors/sensors.h>
 #include <sensors/error.h>
+#endif
+#if HAVE_LIBNVIDIA_ML
+#include <NVCtrl/NVCtrl.h>
+#include <nvml.h>
+#endif
 
 using namespace std;
 
@@ -39,6 +46,11 @@ double EstMaxTime(vector<double>, vector<double>, vector<double>, vector<time_t>
 
 int main(int argc,char** argv)
 {
+    if (HAVE_LIBSENSORS != 1) 
+    {
+        printf("WARNING: lm_sensors must be installed for this program to work.\n\tPlease install lm_sensors and re-configure this package.\n\n");
+        return -1;
+    }
     if (!ProcessArgs(argc,argv))
     {
         fprintf(stderr,"Failed to parse input.\n");
@@ -51,6 +63,38 @@ int main(int argc,char** argv)
     vector<vector<double>> Y_pts;
     vector<vector<double>> Yp_pts;
     vector<vector<double>> Ypp_pts;
+
+    //IF NVIDIA IS INSTALLED
+#if HAVE_LIBNVIDIA_ML
+    bool nv = true;
+    unsigned int nvDevCount;
+    vector<nvmlDevice_t> nvDev;
+    unsigned int nvTempTmp = 0;
+    if (nvmlInit() != NVML_SUCCESS)
+    {
+        fprintf(stderr,"Could not initialize nvml library... No GPU temperatures will be reported.\n");
+        nv = false;
+    }
+    else
+    {
+        nvmlDeviceGetCount(&nvDevCount);
+        for (unsigned int i = 0; i < nvDevCount; i++)
+        {
+            nvDev.resize(i+1);
+            if (nvmlDeviceGetHandleByIndex(i,&nvDev[i]) != NVML_SUCCESS) 
+            {
+                fprintf(stderr,"Error: NV Device at index %d could not be used.\n",i);
+                nvDev.erase(nvDev.begin()+i);
+            }
+        }
+        if (nvDev.size() == 0) nv = false;
+        //Check that we can read temperatures from this device (remove if we can't)
+        for (unsigned int i = 0; i < nvDev.size(); i++)
+        {
+            if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) nvDev.erase(nvDev.begin()+i);
+        }
+    }
+#endif
 
     int ERR,ChipNo,FeatNo;
     ChipNo = 0;
@@ -93,9 +137,13 @@ int main(int argc,char** argv)
     if (ChipNames.size() == ChipFeats.size() && ChipFeats.size() == SubFeats.size())
     {
         double val;
-        
-        double MaxTemp[ChipNames.size()];
-        double MaxTime[ChipNames.size()];
+#if HAVE_NVIDIA_ML
+            double MaxTemp[ChipNames.size()+1];
+            double MaxTime[ChipNames.size()+1];
+#else
+            double MaxTemp[ChipNames.size()];
+            double MaxTime[ChipNames.size()];
+#endif
         if (Stats)
         {
             X_pts.resize(ChipNames.size());
@@ -106,6 +154,7 @@ int main(int argc,char** argv)
 
         while (true)
         {
+            //Loop through all (lm_sensors) chips and report temperatures
             for (int i = 0; i < ChipNames.size(); i++)
             {
                 sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
@@ -118,8 +167,28 @@ int main(int argc,char** argv)
                 if (PrtTmp) printf("Sensor %d: %f\n",i,val);
                 if (PrtTmp && Stats && Ypp_pts[i].size() >= 1) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[i],MaxTime[i],i);
                 ProcessTemp(i,val); 
-                    //TODO: we should have this execute a user-specified command
             }
+#if HAVE_LIBNVIDIA_ML
+            if (nv) //NVIDIA GPU data
+            {
+                //Loop through all nvidia chips and report temperatures
+                for (int i = 0; i < nvDev.size(); i++)
+                {
+                    if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size());
+                    val = (double)nvTempTmp;
+                    //NV_CTRL_THERMAL_SENSOR_READING;
+                    if (Stats) X_pts[ChipNames.size() + i].push_back(time(NULL));
+                    if (Stats) Y_pts[ChipNames.size() + i].push_back(val);
+                    if (Stats && Y_pts[ChipNames.size() + i].size() >= 2) Yp_pts[ChipNames.size() + i].push_back(deriv(Y_pts[ChipNames.size() + i][Y_pts.size()-2],Y_pts[ChipNames.size() + i][Y_pts[ChipNames.size() + i].size()-1]));
+                    if (Stats && Yp_pts[ChipNames.size() + i].size() >= 2) Ypp_pts[ChipNames.size() + i].push_back(deriv(Yp_pts[ChipNames.size() + i][Yp_pts.size()-2],Yp_pts[ChipNames.size() + i][Yp_pts[ChipNames.size() + i].size()-1]));
+                    if (Stats) MaxTemp[ChipNames.size() + i] = EstMaxTemp(Y_pts[ChipNames.size() + i],Yp_pts[ChipNames.size() + i],Ypp_pts[ChipNames.size() + i],X_pts[ChipNames.size() + i]);
+                    if (Stats) MaxTime[ChipNames.size() + i] = EstMaxTime(Y_pts[ChipNames.size() + i],Yp_pts[ChipNames.size() + i],Ypp_pts[ChipNames.size() + i],X_pts[ChipNames.size() + i]);
+                    if (PrtTmp) printf("Sensor %d: %f\n",ChipNames.size() + i,val);
+                    if (PrtTmp && Stats && Ypp_pts[ChipNames.size() + i].size() >= 1) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[ChipNames.size() + i],MaxTime[ChipNames.size() + i],ChipNames.size() + i);
+                    ProcessTemp(ChipNames.size() + i,val);
+                }
+            }
+#endif
             if (PrtTmp) printf("Finished Line\n");
             if (!run) break;
             usleep((int)(TimeStep));
@@ -135,6 +204,9 @@ int main(int argc,char** argv)
         pclose(Prog);
         Prog = NULL;
     }
+#if HAVE_LIBNVIDIA_ML
+    nvmlShutdown();
+#endif
     ChipNames.clear();
     ChipFeats.clear();
     SubFeats.clear();
