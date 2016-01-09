@@ -314,6 +314,7 @@ int main(int argc,char** argv)
             }
 
             if (!UseUI) usleep((int)(TimeStep));
+            if (UseUI) timeout(100);
         }
     }
     else 
