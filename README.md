@@ -13,9 +13,9 @@ Usage:
 
 -p	 Path to lm-sensors config file
 
--w	 time interval to wait between checks (seconds); default is 5 seconds
+-f       Specify file containing critical temperatures to check for
 
--T	 Load temperatures from a file
+-w	 time interval to wait between checks (seconds); default is 5 seconds
 
 -s   Print estimates for maximum temperature and time until maximum temperature
         (VERY rough -- shouldn't be trusted for anything important).  This WILL NOT WORK if the timestep is too small; natural heating follows an exponential decay so if there are 3 consecutive timesteps where the temperature values don't change or change as an exponential growth this function will fail to return.
@@ -26,5 +26,8 @@ Usage:
 
 -C	 execute a shell script; 
     		 SCRIPT path should be given in double-quotes.
+    		 
+-UI      EXPERIMENTAL: Starts new user interface (overrides -v, -c, -f, and -s) Start with User Interface (overrides -v, -C, -f, and -s).  User Interface reads and writes a config file from /etc/TempSafe.cfg which contains the sensor critical temperature, the sensor colour code, and the command to be executed when triggered.  The user interface also graphs the temperature over time in the command line environment.
+                The user interface is experimental and has not been thoroughly tested.  Use at your own risk.
     		 
 -h	 Print this help file
