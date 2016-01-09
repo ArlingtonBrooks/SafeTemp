@@ -5,4 +5,4 @@ ACLOCAL_AMFLAGS = -I config
 
 bin_PROGRAMS = tempsafe
 tempsafe_SOURCES = SafeTemp.cpp
-LDFLAGS=-lsensors
+LDFLAGS=-lsensors -lncurses
