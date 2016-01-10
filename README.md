@@ -27,7 +27,7 @@ Usage:
 -C	 execute a shell script; 
     		 SCRIPT path should be given in double-quotes.
     		 
--UI      EXPERIMENTAL: Starts new user interface (overrides -v, -c, -f, and -s) Start with User Interface (overrides -v, -C, -f, and -s).  User Interface reads and writes a config file from /etc/TempSafe.cfg which contains the sensor critical temperature, the sensor colour code, and the command to be executed when triggered.  The user interface also graphs the temperature over time in the command line environment.
+-UI      EXPERIMENTAL: Starts new user interface (overrides -v, -c, -f, and -s) Start with User Interface (overrides -v, -C, -f, and -s).  User Interface reads and writes a config file from /etc/TempSafe.cfg which contains the sensor critical temperature, the sensor colour code, and the command to be executed when triggered.  The user interface also graphs the temperature over time in the command line environment.  The User Interface updates at least every 500 ms.  If a time interval is set, the user should expect up to 500 ms additional waiting time (in addition to what is specified in -w) before a sensor's data is updated.
                 The user interface is experimental and has not been thoroughly tested.  Use at your own risk.
     		 
 -h	 Print this help file
