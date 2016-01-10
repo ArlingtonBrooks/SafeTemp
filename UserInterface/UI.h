@@ -335,12 +335,15 @@ void UserInterface::draw()
                 win->DrawText(0,i+2-Scrollbar,Number,0,1,MODE);
                 win->DrawText(6, i+2-Scrollbar,Name,0,1,MODE);
             }
-            if (PROGS[i] == NULL) PROGS[i] = popen(Command[i].c_str(),"r");
-            else
+            if (TriggerSensors)
             {
-                pclose(PROGS[i]);
-                PROGS[i] = NULL;
-                popen(Command[i].c_str(),"r");
+                if (PROGS[i] == NULL) PROGS[i] = popen(Command[i].c_str(),"r");
+                else
+                {
+                    pclose(PROGS[i]);
+                    PROGS[i] = NULL;
+                    popen(Command[i].c_str(),"r");
+                }
             }
             
         }
