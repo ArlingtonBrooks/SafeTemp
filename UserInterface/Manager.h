@@ -60,6 +60,7 @@ class Manager
     void DrawWindows();
     int AddWin(int,int,int,int,unsigned int,bool,chtype,chtype);
     void ClearBuffers();
+    void ClearBuffer(unsigned int index);
     void RedrawWindow(int i);
 };
 
@@ -143,6 +144,8 @@ int Manager::AddWin(int X, int Y, int W, int H, unsigned int ResetCol = 0, bool 
 ClearBuffers
 	Clears all window buffers and sets a re-draw flag to 
 	    re-draw all windows.
+
+ClearBuffer clears buffer only for window at index 'index'.
 ****************************************************************/
 void Manager::ClearBuffers()
 {
@@ -153,6 +156,13 @@ void Manager::ClearBuffers()
     ColorPairs = 0;
     touchwin(MAIN);
 };
+
+void Manager::ClearBuffer(unsigned int index)
+{
+    Wins[index].ClearBuffer();
+    touchwin(MAIN);
+};
+
 
 /****************************************************************
 RedrawWindow

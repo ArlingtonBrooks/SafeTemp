@@ -46,6 +46,7 @@ class UserInterface
     Cursor CC;
     public:
     long int StartTime, LastTime;
+    bool TriggerSensors = 1;
     
     int CCmax = 3;
     UserInterface(HybridWindow*, Graph*);
@@ -57,6 +58,7 @@ class UserInterface
     void ChgMod(unsigned int);
     unsigned int AddSensor();
     void AppendSensorData(unsigned int, float, int);
+    bool TriggerDataGrab(int);
     void UpdateTimer(int);
     void draw();
     void MoveCurs(short unsigned int);
@@ -206,7 +208,6 @@ AppendSensorData
 ****************************************************************/
 void UserInterface::AppendSensorData(unsigned int Index, float DATA, int interval)
 {
-    gettimeofday(&TV_timer,NULL);
     if (TV_timer.tv_sec - LastTime >= interval || LastTime == StartTime) 
     {
         fPoint DataPoint;
@@ -218,6 +219,33 @@ void UserInterface::AppendSensorData(unsigned int Index, float DATA, int interva
 };
 
 /****************************************************************
+TriggerDataGrab:
+	Takes:
+	    interval: Time (in seconds) to wait before triggering
+		sensor data grab
+
+	TriggerSensors is a boolean value introduced to prevent
+		this program from calling a sensor grab every 
+		100 ms; this was causing high CPU usage and 
+		was completely unnecessary.  This fix should
+		allow the program to idle with less CPU usage.
+****************************************************************/
+bool UserInterface::TriggerDataGrab(int interval)
+{
+    gettimeofday(&TV_timer,NULL);
+    if (TV_timer.tv_sec - LastTime >= interval || LastTime == StartTime) 
+    {
+        TriggerSensors = 1;
+        return 1;
+    }
+    else 
+    {
+        TriggerSensors = 0;
+        return 0;
+    }
+};
+
+/****************************************************************
 UpdateTimer:
 	Takes: 
 	    interval: Time (in seconds) to wait before altering
@@ -225,9 +253,17 @@ UpdateTimer:
 ****************************************************************/
 void UserInterface::UpdateTimer(int interval)
 {
-    if (TV_timer.tv_sec - LastTime >= interval) LastTime = TV_timer.tv_sec;
-    if (LastTime == StartTime) LastTime++;
-    GG->AutoRecalcSize();
+    if (TV_timer.tv_sec - LastTime >= interval) 
+    {
+        LastTime = TV_timer.tv_sec;
+        GG->AutoRecalcSize();
+        TriggerSensors = 0;
+    }
+    if (LastTime == StartTime) 
+    {
+        LastTime++;
+        TriggerSensors = 0;
+    }
 };
 
 /****************************************************************

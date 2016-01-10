@@ -246,42 +246,70 @@ int main(int argc,char** argv)
         while (true)
         {
             /* Loop through all available sensors and perform relevant actions */
-            for (int i = 0; i < ChipNames.size(); i++)
+            if (!UseUI)
             {
-                sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
-                if (Stats && !UseUI) X_pts[i].push_back(time(NULL));
-                if (Stats && !UseUI) Y_pts[i].push_back(val);
-                if (Stats && Y_pts[i].size() >= 2 && !UseUI) Yp_pts[i].push_back(deriv(Y_pts[i][Y_pts.size()-2],Y_pts[i][Y_pts[i].size()-1]));
-                if (Stats && Yp_pts[i].size() >= 2 && !UseUI) Ypp_pts[i].push_back(deriv(Yp_pts[i][Yp_pts.size()-2],Yp_pts[i][Yp_pts[i].size()-1]));
-                if (Stats && !UseUI) MaxTemp[i] = EstMaxTemp(Y_pts[i],Yp_pts[i],Ypp_pts[i],X_pts[i]);
-                if (Stats && !UseUI) MaxTime[i] = EstMaxTime(Y_pts[i],Yp_pts[i],Ypp_pts[i],X_pts[i]);
-                if (PrtTmp && !UseUI) printf("Sensor %d: %f\n",i,val);
-                if (PrtTmp && Stats && Ypp_pts[i].size() >= 1 && !UseUI) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[i],MaxTime[i],i);
-                if (!UseUI) ProcessTemp(i,val);
-                if (UseUI) UI.AppendSensorData(i,val,TimeStep/1000000);
-            }
-#if HAVE_LIBNVIDIA_ML
-            if (nv) //NVIDIA GPU data
-            {
-                /*Loop through all nvidia chips and perform relevant actions */
-                for (int i = 0; i < nvDev.size(); i++)
+                for (int i = 0; i < ChipNames.size(); i++)
                 {
-                    if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size());
-                    val = (double)nvTempTmp;
-                    //NV_CTRL_THERMAL_SENSOR_READING;
-                    if (Stats && !UseUI) X_pts[ChipNames.size() + i].push_back(time(NULL));
-                    if (Stats && !UseUI) Y_pts[ChipNames.size() + i].push_back(val);
-                    if (Stats && Y_pts[ChipNames.size() + i].size() >= 2 && !UseUI) Yp_pts[ChipNames.size() + i].push_back(deriv(Y_pts[ChipNames.size() + i][Y_pts.size()-2],Y_pts[ChipNames.size() + i][Y_pts[ChipNames.size() + i].size()-1]));
-                    if (Stats && Yp_pts[ChipNames.size() + i].size() >= 2 && !UseUI) Ypp_pts[ChipNames.size() + i].push_back(deriv(Yp_pts[ChipNames.size() + i][Yp_pts.size()-2],Yp_pts[ChipNames.size() + i][Yp_pts[ChipNames.size() + i].size()-1]));
-                    if (Stats && !UseUI) MaxTemp[ChipNames.size() + i] = EstMaxTemp(Y_pts[ChipNames.size() + i],Yp_pts[ChipNames.size() + i],Ypp_pts[ChipNames.size() + i],X_pts[ChipNames.size() + i]);
-                    if (Stats && !UseUI) MaxTime[ChipNames.size() + i] = EstMaxTime(Y_pts[ChipNames.size() + i],Yp_pts[ChipNames.size() + i],Ypp_pts[ChipNames.size() + i],X_pts[ChipNames.size() + i]);
-                    if (PrtTmp && !UseUI) printf("Sensor %d: %f\n",ChipNames.size() + i,val);
-                    if (PrtTmp && Stats && Ypp_pts[ChipNames.size() + i].size() >= 1 && !UseUI) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[ChipNames.size() + i],MaxTime[ChipNames.size() + i],ChipNames.size() + i);
-                    if (!UseUI) ProcessTemp(ChipNames.size() + i,val);
-                    if (UseUI) UI.AppendSensorData(ChipNames.size()+i,val,TimeStep/1000000);
+                    sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
+                    if (Stats) X_pts[i].push_back(time(NULL));
+                    if (Stats) Y_pts[i].push_back(val);
+                    if (Stats && Y_pts[i].size() >= 2) Yp_pts[i].push_back(deriv(Y_pts[i][Y_pts.size()-2],Y_pts[i][Y_pts[i].size()-1]));
+                    if (Stats && Yp_pts[i].size() >= 2) Ypp_pts[i].push_back(deriv(Yp_pts[i][Yp_pts.size()-2],Yp_pts[i][Yp_pts[i].size()-1]));
+                    if (Stats) MaxTemp[i] = EstMaxTemp(Y_pts[i],Yp_pts[i],Ypp_pts[i],X_pts[i]);
+                    if (Stats) MaxTime[i] = EstMaxTime(Y_pts[i],Yp_pts[i],Ypp_pts[i],X_pts[i]);
+                    if (PrtTmp) printf("Sensor %d: %f\n",i,val);
+                    if (PrtTmp && Stats && Ypp_pts[i].size() >= 1) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[i],MaxTime[i],i);
+                    ProcessTemp(i,val);
+                }
+#if HAVE_LIBNVIDIA_ML
+                if (nv) //NVIDIA GPU data
+                {
+                    /*Loop through all nvidia chips and perform relevant actions */
+                    for (int i = 0; i < nvDev.size(); i++)
+                    {
+                        if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size());
+                        val = (double)nvTempTmp;
+                        //NV_CTRL_THERMAL_SENSOR_READING;
+                        if (Stats) X_pts[ChipNames.size() + i].push_back(time(NULL));
+                        if (Stats) Y_pts[ChipNames.size() + i].push_back(val);
+                        if (Stats && Y_pts[ChipNames.size() + i].size() >= 2) Yp_pts[ChipNames.size() + i].push_back(deriv(Y_pts[ChipNames.size() + i][Y_pts.size()-2],Y_pts[ChipNames.size() + i][Y_pts[ChipNames.size() + i].size()-1]));
+                        if (Stats && Yp_pts[ChipNames.size() + i].size() >= 2) Ypp_pts[ChipNames.size() + i].push_back(deriv(Yp_pts[ChipNames.size() + i][Yp_pts.size()-2],Yp_pts[ChipNames.size() + i][Yp_pts[ChipNames.size() + i].size()-1]));
+                        if (Stats) MaxTemp[ChipNames.size() + i] = EstMaxTemp(Y_pts[ChipNames.size() + i],Yp_pts[ChipNames.size() + i],Ypp_pts[ChipNames.size() + i],X_pts[ChipNames.size() + i]);
+                        if (Stats) MaxTime[ChipNames.size() + i] = EstMaxTime(Y_pts[ChipNames.size() + i],Yp_pts[ChipNames.size() + i],Ypp_pts[ChipNames.size() + i],X_pts[ChipNames.size() + i]);
+                        if (PrtTmp) printf("Sensor %d: %f\n",ChipNames.size() + i,val);
+                        if (PrtTmp && Stats && Ypp_pts[ChipNames.size() + i].size() >= 1) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[ChipNames.size() + i],MaxTime[ChipNames.size() + i],ChipNames.size() + i);
+                        ProcessTemp(ChipNames.size() + i,val);
+                    }
+                }
+#endif
+            }
+            else
+            {
+                if (UI.TriggerSensors)
+                {
+                    for (int i = 0; i < ChipNames.size(); i++)
+                    {
+                        sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
+                        UI.AppendSensorData(i,val,TimeStep/1000000);
+                    }
+#if HAVE_LIBNVIDIA_ML
+                    if (nv) //NVIDIA GPU data
+                    {
+                        /*Loop through all nvidia chips and perform relevant actions */
+                        for (int i = 0; i < nvDev.size(); i++)
+                        {
+                            if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size());
+                            val = (double)nvTempTmp;
+                            //NV_CTRL_THERMAL_SENSOR_READING;
+                            UI.AppendSensorData(ChipNames.size()+i,val,TimeStep/1000000);
+                        }
+                    }
+#endif
+
                 }
             }
-#endif
+
+
             if (PrtTmp && !UseUI) printf("Finished Line\n");
             if (!run) break;
             
@@ -289,6 +317,7 @@ int main(int argc,char** argv)
             if (UseUI)
             {
                 UI.UpdateTimer(TimeStep/1000000);
+                UI.TriggerDataGrab(TimeStep/1000000);
                 CharBuffer = 0;
                 CharBuffer = getch();
 
@@ -301,20 +330,24 @@ int main(int argc,char** argv)
                 if (CharBuffer == KEY_ENTER || CharBuffer == '\n' || CharBuffer == '\r') UI.GetCommand();
                 if (CharBuffer == 'q') run = 0;
 
-
-                WM.ClearBuffers();
-                GP.DrawToWindow();
-                WM.Wins[WM_Graph].DrawAlignedText(ALIGN_BOTTOM_CENTER,"Time Since Program Start (seconds)",7,0);
-                WM.Wins[WM_Graph].DrawAlignedText(ALIGN__LEFT,"Temperature C",7,0);
-                WM.Wins[WM_Graph].DrawAlignedText(ALIGN_TOP_CENTER,"Temperature vs. Time",7,0);
+                WM.ClearBuffer(WM_Data);
+                if (UI.TriggerSensors)
+                {
+                    WM.ClearBuffer(WM_Graph);
+                    WM.Wins[WM_Graph].DrawAlignedText(ALIGN_BOTTOM_CENTER,"Time Since Program Start (seconds)",7,0);
+                    WM.Wins[WM_Graph].DrawAlignedText(ALIGN__LEFT,"Temperature C",7,0);
+                    WM.Wins[WM_Graph].DrawAlignedText(ALIGN_TOP_CENTER,"Temperature vs. Time",7,0);
+                }
                 WM.Wins[WM_Data].DrawAlignedText(ALIGN_TOP_CENTER,"-Main Menu- (tap q to exit)",0,7,A_BOLD & A_STANDOUT);
+                GP.DrawToWindow();
                 UI.draw();
                 move(WM.MAIN->_maxy,0);
                 WM.DrawWindows();
+
             }
 
             if (!UseUI) usleep((int)(TimeStep));
-            if (UseUI) timeout(100);
+            if (UseUI) timeout(500);
         }
     }
     else 
