@@ -1,7 +1,5 @@
 # SafeTemp: preventing overheating
 
-This is currently on its first release.
-
 This software checks that your Linux system is operating at a safe temperature and optionally executes a command if it's not.  If the user does not specify a temperature threshold file, no temperature threshold is set and the program will not do anything (although if the -v modifier is used, the program will display the sensor temperatures)
 
 To install, run ./configure, then make, then (as root) make install
@@ -27,8 +25,8 @@ Usage:
 -UI             EXPERIMENTAL: Starts new user interface (overrides -v, -c, -f, and -s) Start with User Interface (overrides -v, -C, -f, and -s).  User Interface reads and writes a config file from /etc/TempSafe.cfg which contains the sensor critical temperature, the sensor colour code, and the command to be executed when triggered.  The user interface also graphs the temperature over time in the command line environment.  The User Interface updates at least every 500 ms.  If a time interval is set, the user should expect up to 500 ms additional waiting time (in addition to what is specified in -w) before a sensor's data is updated.
                          The user interface is experimental and has not been thoroughly tested.  Use at your own risk.
                 
---use-gtk       EXPERIMENTAL: Use GTK graphical interface\n\t\tReads config file from ~/.config/TempSafe_GUI.cfg
-                        This argument can only be used with the -w argument.  Other combinations are undefined.
+--use-gtk       EXPERIMENTAL: Use GTK graphical interface.  Reads config file from ~/.config/TempSafe_GUI.cfg
+                        *This argument can only be used with the -w argument*.  Other combinations are undefined.
                         This user interface is experimental.  Use at your own risk.
     		 
 -h	        Print this help file
