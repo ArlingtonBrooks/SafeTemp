@@ -11,23 +11,24 @@ to run, run ./tempsafe from the install directory
 
 Usage: 
 
--p	 Path to lm-sensors config file
+-p	        Path to lm-sensors config file
 
--f       Specify file containing critical temperatures to check for
+-f              Specify file containing critical temperatures to check for
 
--w	 time interval to wait between checks (seconds); default is 5 seconds
+-w	        time interval to wait between checks (seconds); default is 5 seconds
 
--s   Print estimates for maximum temperature and time until maximum temperature
-        (VERY rough -- shouldn't be trusted for anything important).  This WILL NOT WORK if the timestep is too small; natural heating follows an exponential decay so if there are 3 consecutive timesteps where the temperature values don't change or change as an exponential growth this function will fail to return.
+-i	        Don't run, just print temperatures and exit (implies -v)
 
--i	 Don't run, just print temperatures and exit (implies -v)
+-v	        Verbose output (print temperatures at each TIME interval)
 
--v	 Verbose output (print temperatures at each TIME interval)
-
--C	 execute a shell script; 
-    		 SCRIPT path should be given in double-quotes.
+-C              execute a shell script; 
+    		        SCRIPT path should be given in double-quotes.
     		 
--UI      EXPERIMENTAL: Starts new user interface (overrides -v, -c, -f, and -s) Start with User Interface (overrides -v, -C, -f, and -s).  User Interface reads and writes a config file from /etc/TempSafe.cfg which contains the sensor critical temperature, the sensor colour code, and the command to be executed when triggered.  The user interface also graphs the temperature over time in the command line environment.  The User Interface updates at least every 500 ms.  If a time interval is set, the user should expect up to 500 ms additional waiting time (in addition to what is specified in -w) before a sensor's data is updated.
-                The user interface is experimental and has not been thoroughly tested.  Use at your own risk.
+-UI             EXPERIMENTAL: Starts new user interface (overrides -v, -c, -f, and -s) Start with User Interface (overrides -v, -C, -f, and -s).  User Interface reads and writes a config file from /etc/TempSafe.cfg which contains the sensor critical temperature, the sensor colour code, and the command to be executed when triggered.  The user interface also graphs the temperature over time in the command line environment.  The User Interface updates at least every 500 ms.  If a time interval is set, the user should expect up to 500 ms additional waiting time (in addition to what is specified in -w) before a sensor's data is updated.
+                         The user interface is experimental and has not been thoroughly tested.  Use at your own risk.
+                
+--use-gtk       EXPERIMENTAL: Use GTK graphical interface\n\t\tReads config file from ~/.config/TempSafe_GUI.cfg
+                        This argument can only be used with the -w argument.  Other combinations are undefined.
+                        This user interface is experimental.  Use at your own risk.
     		 
--h	 Print this help file
+-h	        Print this help file
