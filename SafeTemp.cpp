@@ -23,18 +23,41 @@ KNOWN BUGS:
 		editing "commands"
 	-In the User Interface, the cursor position is not steady
 	-The Estimated Maximum Temperatures make no sense
+	-This program WILL RUN OUT OF MEMORY EVENTUALLY WHEN USING
+                THE GUI.  The graphical interfaces store the
+                temperatures from the start of the program.  
+
+RECOMMENDATION:
+        -Since there is a known (eventual) memory issue, it is
+                recommended that for a system with 4 temperature
+                sensors, a time interval of 1 minute be selected.
+                This will result in up to 10 MB of sensor data
+                being stored after a run time of about 800 days.
+
+PLANNED UPDATES:
+        GUI:
+            -Datapoint Count selector (select the number of time
+                intervals to display)
+            -Save sensor data as CSV for analysis
+            -Save graph PNG to filename
+            -Pop-up for handling all sensor configurations
+            -Sensor construction interface to read data from
+                a file stream instead of lm_sensors
 ****************************************************************/
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
+#include <iostream>
 #include <errno.h>
 #include <unistd.h>
+#include <thread>
 #include <string>
 #include <cstring>
 #include <vector>
 #include <cmath>
 #include <config.h>
-#if HAVE_LIBSENSORS
+#if HAVE_LIBSENSORS //this should ALWAYS be true
 #include <sensors/sensors.h>
 #include <sensors/error.h>
 #endif
@@ -46,6 +69,7 @@ KNOWN BUGS:
 #include "UserInterface/Manager.h"
 #include "UserInterface/Graph.h"
 #include "UserInterface/UI.h"
+#include "UserInterface/GTKInterface.h"
 using namespace std;
 
 /****************************************************************
@@ -80,8 +104,9 @@ string Command = "";
 string HomeDir = "";
 
 bool UseUI = 0;
+bool UseGUI = 0;
 
-string helptext = "tempsafe -p FILE -w TIME -i -v -f FILE -C SCRIPT \nsensors-checking program\nKevin Brooks, 2015\nUsage: \n-p\t Path to lm-sensors config file\n-w\t time interval to wait between checks (seconds); default is 5 seconds\n-s\t Calculate statistics (when possible) and give information as to when the max temperature will be reached, and what that maximum temperature might be\n\t\t NOTE: this is VERY rough and shouldn't be trusted for anything critical.\n-f\t Load temperatures from a file\n-i\t Don't run, just print temperatures and exit (implies -v)\n-v\t Verbose output (print temperatures at each TIME interval)\n-C\t execute a shell script;\n-UI\t EXPERIMENTAL: Start with User Interface (overrides -v, -c, -f, and -s)\n\t\tUser Interface reads a config file from /etc/TempSafe.cfg \n\t\t SCRIPT path should be given in double-quotes.\n-h\t Print this help file\n\n";
+string helptext = "tempsafe -p FILE -w TIME -i -v -f FILE -C SCRIPT \nsensors-checking program\nKevin Brooks, 2015\nUsage: \n-p\t\tPath to lm-sensors config file\n-w\t\ttime interval to wait between checks (seconds); default is 5 seconds\n-f\t\tLoad temperatures from a file\n-i\t\tDon't run, just print temperatures and exit (implies -v)\n-v\t\tVerbose output (print temperatures at each TIME interval)\n-C\t\texecute a shell script;\n\t\tSCRIPT path should be given in double-quotes.\n-UI\t\tEXPERIMENTAL: Start with User Interface (overrides -v, -c, -f, and -s)\n\t\tUser Interface reads a config file from ~/.config/TempSafe.cfg \n--use-gtk\tEXPERIMENTAL: Use GTK graphical interface\n\t\tReads config file from ~/.config/TempSafe_GUI.cfg\n-h\t\tPrint this help file\n\n";
 
 bool ProcessArgs(int, char**);
 bool ParseTemp();
@@ -109,6 +134,11 @@ int main(int argc,char** argv)
         fprintf(stderr,"Failed to parse input.\n");
         printf(helptext.c_str());
         return -3;
+    }
+    if (UseUI && UseGUI)
+    {
+        fprintf(stderr,"ERROR: -UI and --use-gtk cannot be used simultaneously\n");
+        return -4;
     }
 
     /* Statistics variables */
@@ -238,6 +268,15 @@ int main(int argc,char** argv)
     int CharBuffer = 0;
     if (!UseUI) endwin();
     if (UseUI) nodelay(stdscr,1);
+
+#if HAVE_GTK == 1 && HAVE_GNUPLOT == 1
+    std::thread GTKMain;
+    if (UseGUI)
+    {
+        GUI::BuildInterface(argc,argv,SensorNames,&run);
+        GTKMain = std::thread(gtk_main);
+    }
+#endif
     
     /* Main Events Loop */
     if (ChipNames.size() == ChipFeats.size() && ChipFeats.size() == SubFeats.size())
@@ -261,7 +300,7 @@ int main(int argc,char** argv)
         while (true)
         {
             /* Loop through all available sensors and perform relevant actions */
-            if (!UseUI)
+            if (!UseUI && !UseGUI)
             {
                 for (int i = 0; i < ChipNames.size(); i++)
                 {
@@ -298,7 +337,7 @@ int main(int argc,char** argv)
                 }
 #endif
             }
-            else
+            else if (UseUI)//UseUI OR UseGUI
             {
                 if (UI.TriggerSensors)
                 {
@@ -313,7 +352,7 @@ int main(int argc,char** argv)
                         /*Loop through all nvidia chips and perform relevant actions */
                         for (int i = 0; i < nvDev.size(); i++)
                         {
-                            if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size());
+                            if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size() + i);
                             val = (double)nvTempTmp;
                             //NV_CTRL_THERMAL_SENSOR_READING;
                             UI.AppendSensorData(ChipNames.size()+i,val,TimeStep/1000000);
@@ -323,11 +362,39 @@ int main(int argc,char** argv)
 
                 }
             }
+#if HAVE_GTK == 1 && HAVE_GNUPLOT == 1
+            else if (UseGUI)
+            {
+                if (GUI::Handle.GetTimeTrigger(TimeStep/1000000))
+                {
+                    for (int i = 0; i < ChipNames.size(); i++)
+                    {
+                        sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
+                        GUI::Handle.AddData((float)val,i);
+                    }
+    #if HAVE_LIBNVIDIA_ML
+                    if (nv) //NVIDIA GPU data
+                    {
+                        /*Loop through all nvidia chips and perform relevant actions */
+                        for (int i = 0; i < nvDev.size(); i++)
+                        {
+                            if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size() + i);
+                            val = (double)nvTempTmp;
+                            //NV_CTRL_THERMAL_SENSOR_READING;
+                            GUI::Handle.AddData((float)val,ChipNames.size()+i);
+//                            UI.AppendSensorData(ChipNames.size()+i,val,TimeStep/1000000);
+                        }
+                    }
+    #endif
+                    GUI::replot(NULL,GUI::Objects);
+                }
+            }
+#endif
 
 
             if (PrtTmp && !UseUI) printf("Finished Line\n");
             if (!run) break;
-            
+
             /* If User Interface is enabled, perform the required actions to process data */
             if (UseUI)
             {
@@ -361,8 +428,10 @@ int main(int argc,char** argv)
 
             }
 
-            if (!UseUI) usleep((int)(TimeStep));
-            if (UseUI) timeout(500);
+            if (!UseUI && !UseGUI) usleep((int)(TimeStep));
+            if (UseUI && !UseGUI) timeout(500);
+            if (UseGUI) usleep(10000);//((int)TimeStep/4);
+            GUI::CheckResize(NULL,GUI::Objects);
         }
     }
     else 
@@ -371,6 +440,9 @@ int main(int argc,char** argv)
         return -1;
     }
     /* Clean up on exit */
+#if HAVE_GTK == 1 && HAVE_GNUPLOT == 1
+    if (UseGUI) GTKMain.join();
+#endif
     if (Prog != NULL)
     {
         pclose(Prog);
@@ -429,6 +501,7 @@ bool ProcessArgs(int argc, char** argv)
         else if (strcmp(argv[i],"-C") == 0) {Command = (string)argv[i+1]; i++;}
         else if (strcmp(argv[i],"-s") == 0) Stats = 1;
         else if (strcmp(argv[i],"-UI") == 0) UseUI = 1;
+        else if (strcmp(argv[i],"--use-gtk") == 0) UseGUI = 1;
         else if (argv[i][0] == '-')
         {
             for (int j = 1; j < string(argv[i]).length(); j++) 
@@ -803,3 +876,140 @@ bool WriteConfig(UserInterface* UI)
         return 1;
     }
 }
+
+/*
+GUI Config binary file format:
+    GUI Config file starts with a 13-character signature
+    detailing the file version number.
+    File Format Heirarchy:
+        (int)# of sensors
+        <for all sensors>:
+        |(char*) null-terminated sensor name
+        |(unsigned int) colour
+        |(float) critical temperature
+        |(char) sensor active (converts to bool)
+        |(char*) null-terminated command
+*/
+
+/****************************************************************
+SaveGUIConfig
+	Takes:
+	    GUI Data Handler for the current context
+	Returns:
+	    1 upon successful updating of config files
+
+	This function checks the text in the TempSafe_GUI.cfg file
+		and if the data has changed, writes the updated
+		information.
+****************************************************************/
+bool SaveGUIConfig(GUI::GUIDataHandler *Handle)
+{
+    FILE *f;
+    string ConfFile = HomeDir + "/.config/TempSafe_GUI.cfg";
+    f = fopen(ConfFile.c_str(),"r");
+    if (f != NULL)
+    {
+        fclose(f);
+        remove(ConfFile.c_str());
+    }
+
+    std::ofstream f_out(ConfFile.c_str(),std::ifstream::binary);
+
+    /*Read signature: {SafeTemp_0.3}*/
+    char Signature[13] = "SafeTemp_0.3";
+    f_out.write(Signature,sizeof(Signature));
+
+    int NumSensors = Handle->SensorNames.size();
+    f_out.write((char*)&NumSensors,sizeof(int));
+    for (int i = 0; i < Handle->SensorNames.size(); i++)
+    {
+        for (int j = 0; j < Handle->SensorNames[i].length(); j++)
+        {
+            f_out.write((char*)&Handle->SensorNames[i][j],sizeof(char));
+        }
+        char NullChar = '\0';
+        f_out.write(&NullChar,sizeof(char));
+        unsigned int TMP_Colour = Handle->SensorColours[i];
+        float TMP_Critical = Handle->SensorCriticals[i];
+        char TMP_Active = (char)Handle->SensorActive[i];
+        f_out.write((char*)&TMP_Colour,sizeof(unsigned int));
+        f_out.write((char*)&TMP_Critical,sizeof(float));
+        f_out.write((char*)&TMP_Active,sizeof(char));
+        for (int j = 0; j < Handle->SensorCommands[i].length(); j++)
+        {
+            f_out.write((char*)&Handle->SensorCommands[i][j],sizeof(char));
+        }
+        f_out.write(&NullChar,sizeof(char));
+    }
+    f_out.close();
+    return 1;
+};
+
+/****************************************************************
+ReadGUIConfig
+    Takes:
+        GUI Data Handler for the current context
+    Returns:
+        1 upon successful reading of config file
+
+    This function reads information from the binary-formatted
+        TempSafe_GUI.cfg and loads the configuration information
+        for use.  
+****************************************************************/
+bool ReadGUIConfig(GUI::GUIDataHandler *Handle)
+{
+    FILE *f;
+    string ConfFile = HomeDir + "/.config/TempSafe_GUI.cfg";
+    f = fopen(ConfFile.c_str(),"r");
+    if (f == NULL) return 0;
+    else fclose(f);
+
+    std::ifstream f_in(ConfFile.c_str(),std::ifstream::binary);
+
+    /*Read signature: {SafeTemp_0.3}*/
+    char Signature[13];
+    f_in.read(Signature,sizeof(Signature));
+
+    int NumSensors = 0;
+    Handle->Harmonize();
+
+    if (strcmp(Signature,"SafeTemp_0.3") == 0)
+    {
+        f_in.read((char*)&NumSensors,sizeof(int));
+        if (Handle->SensorNames.size() != NumSensors)
+            return 0;
+        for (int i = 0; i < NumSensors; i++)
+        {
+            char BUFFER;
+            f_in.read(&BUFFER,sizeof(char));
+            while (BUFFER != '\0' && !f_in.eof())
+            {
+                /*Basically dump this buffer (the sensor name is just a placeholder in the file*/
+                f_in.read(&BUFFER,sizeof(char));
+            }
+            unsigned int TMP_Colour;
+            float TMP_Critical;
+            char TMP_Active;
+            f_in.read((char*)&TMP_Colour,sizeof(unsigned int));
+            f_in.read((char*)&TMP_Critical,sizeof(float));
+            f_in.read((char*)&TMP_Active,sizeof(char));
+            Handle->SensorColours[i] = TMP_Colour;
+            Handle->SensorCriticals[i] = TMP_Critical;
+            Handle->SensorActive[i] = (bool)TMP_Active;
+
+            f_in.read(&BUFFER,sizeof(char));
+            while (BUFFER != '\0' && !f_in.eof())
+            {
+                Handle->SensorCommands[i] += BUFFER;
+                f_in.read(&BUFFER,sizeof(char));
+            }
+        }
+    }
+    else
+    {
+        fprintf(stderr,"[Load Config]: %s: Unrecognized file format %s.\n",ConfFile.c_str(),Signature);
+        return 0;
+    }
+    f_in.close();
+    return 1;
+};

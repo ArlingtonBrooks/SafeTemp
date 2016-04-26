@@ -22,8 +22,7 @@ User Interface Library
 #include <stdio.h>
 #include <sys/time.h>
 
-
-struct Cursor
+struct CursXY
 {
     int x;
     int y;
@@ -59,7 +58,7 @@ class UserInterface
     unsigned int Scrollbar = 0;
 
     struct timeval TV_timer;
-    Cursor CC;
+    CursXY CC;
     public:
     long int StartTime, LastTime;
     bool TriggerSensors = 1;

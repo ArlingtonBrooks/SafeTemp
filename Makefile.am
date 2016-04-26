@@ -5,4 +5,6 @@ ACLOCAL_AMFLAGS = -I config
 
 bin_PROGRAMS = tempsafe
 tempsafe_SOURCES = SafeTemp.cpp
-LDFLAGS=-lsensors -lncurses
+LDFLAGS=-lsensors -lncurses -lpthread
+AM_CPPFLAGS = ${GTK_CFLAGS}
+tempsafe_LDADD = ${GTK_LIBS}
