@@ -29,6 +29,6 @@ Usage:
                         *This argument can only be used with the -w argument*.  Other combinations are undefined.
                         This user interface is experimental.  Use at your own risk.
                         
-                        **WARNING**: the GTK interface is known to crash without warning.  It should not be used outside of evaluating the capabilities of the SafeTemp program at this time.  A fix will be released in the future.  Currently, use of the GTK interface is **DISCOURAGED**.
+**WARNING**: the GTK interface is known to crash without warning.  It should not be used outside of evaluating the capabilities of the SafeTemp program at this time.  A fix will be released in the future.  Currently, use of the GTK interface is **DISCOURAGED**.
     		 
 -h	        Print this help file
