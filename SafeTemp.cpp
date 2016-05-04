@@ -386,7 +386,7 @@ int main(int argc,char** argv)
                         }
                     }
     #endif
-                    GUI::replot(NULL,GUI::Objects);
+                    g_idle_add((GSourceFunc)GUI::replot,GUI::Objects);
                 }
             }
 #endif
@@ -430,8 +430,13 @@ int main(int argc,char** argv)
 
             if (!UseUI && !UseGUI) usleep((int)(TimeStep));
             if (UseUI && !UseGUI) timeout(500);
-            if (UseGUI) usleep(10000);//((int)TimeStep/4);
-            GUI::CheckResize(NULL,GUI::Objects);
+#if HAVE_GTK == 1 && HAVE_GNUPLOT == 1
+            if (UseGUI) 
+            {
+                usleep(10000);//((int)TimeStep/4);
+                g_idle_add((GSourceFunc)GUI::CheckResize,GUI::Objects);
+            }
+#endif
         }
     }
     else 

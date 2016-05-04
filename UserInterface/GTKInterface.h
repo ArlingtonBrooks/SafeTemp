@@ -380,7 +380,7 @@ namespace GUI
             and executes designated commands when required
         -Takes: GtkWidget (unused), Object data
     */
-    void UpdateTemps(GtkWidget* Widget, gpointer data)
+    void UpdateTemps(gpointer data)
     {
         GObject** ObjData = (GObject**)data;
         int2string *IntData = (int2string*)ObjData[1];
@@ -426,7 +426,7 @@ namespace GUI
             temperature readouts.
         -Takes: Container (unused), Object data
     */
-    void replot(GtkWidget* Container, gpointer data)
+    bool replot(gpointer data)
     {
         GObject** ObjData = (GObject**)data;
         int2string *IntData = (int2string*)ObjData[1];
@@ -448,7 +448,7 @@ namespace GUI
         if (Gnuplot == NULL)
         {
             fprintf(stderr,"[gnuplot]: unable to start program\n");
-            return;
+            return false;
         }
         fprintf(Gnuplot,"set terminal pngcairo size %d,%d\n",wid,hit);
         fflush(Gnuplot);
@@ -506,7 +506,8 @@ namespace GUI
         gtk_image_set_from_file((GtkImage*)ObjData[IntData->Seek("Graph Surface")],IntData->FName.c_str());
         gtk_widget_queue_draw((GtkWidget*)ObjData[IntData->Seek("Graph Surface")]);
 
-        UpdateTemps(NULL,data);
+        UpdateTemps(data);
+        return false;
     };
 
     /*
@@ -514,7 +515,7 @@ namespace GUI
         Checks if the window has been resized and calls replot if it has
         -Takes: Widget (unused) and Object data.
     */
-    void CheckResize(GtkWidget* Widget, gpointer data)
+    bool CheckResize(gpointer data)
     {
         GObject** ObjData = (GObject**)data;
         int2string *IntData = (int2string*)ObjData[1];
@@ -525,7 +526,8 @@ namespace GUI
         hit = gtk_widget_get_allocated_height((GtkWidget*)ObjData[IntData->Seek("Graph Socket")]);
 
         if (hit != IntData->Height || wid != IntData->Width)
-            replot(NULL,data);
+            replot(data);
+        return false;
     };
 
     /*
