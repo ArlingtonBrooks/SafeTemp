@@ -667,6 +667,7 @@ EstMaxTemp:
 	I am thinking of instead performing some statistical
 		analysis of the data to get a best-fit exponential
 		curve, or perhaps removing this function outright.
+	As of March 2016, this function is no longer available.
 ****************************************************************/
 double EstMaxTemp(vector<double> y, vector<double> yp, vector<double> ypp, vector<time_t> t)
 {
@@ -697,6 +698,7 @@ EstMaxTime
 		temperature will be reached.
 
 	See comments for EstMaxTemp for more information.
+	As of March 2016, this function is no longer available.
 ****************************************************************/
 double EstMaxTime(vector<double> y, vector<double> yp, vector<double> ypp, vector<time_t> t)
 {
