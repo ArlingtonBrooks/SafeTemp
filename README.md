@@ -1,5 +1,9 @@
 # SafeTemp: preventing overheating
 
+**NOTICE: Due to lack of upstream development for lm_sensors, especially as it relates to modern hardware releases such as AMD's Ryzen architecture, SafeTemp is no longer under active development.  Any bugs will continue to be fixed depending on their severity, however feature updates will no longer be pushed.**
+
+**NOTICE2: This software is spread out in its construction and does not correctly implement static libraries.  Code clarification and cleaning was intended to be completed in a future feature update, however should no longer be expected.**
+
 This software checks that your Linux system is operating at a safe temperature and optionally executes a command if it's not.  If the user does not specify a temperature threshold file, no temperature threshold is set and the program will not do anything (although if the -v modifier is used, the program will display the sensor temperatures)
 
 To install, run ./configure, then make, then (as root) make install
