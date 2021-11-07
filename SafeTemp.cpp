@@ -230,18 +230,22 @@ int main(int argc,char** argv)
         SensorNames[i] = string(SensorLabel);
         free(SensorLabel);
     }
+#if HAVE_LIBNVIDIA_ML
     if (nv)
     {
         for (int i = 0; i < nvDev.size(); i++) SensorNames.push_back("NVidia Device");
     }
+#endif
     Manager WM;
     int WM_Graph = WM.AddWin(0,0,WM.MAIN->_maxx,(int)((float)WM.MAIN->_maxy/2.0)-2,1,0);
     int WM_Data = WM.AddWin(0,(int)((float)WM.MAIN->_maxy/2.0)+2,WM.MAIN->_maxx,(int)((float)WM.MAIN->_maxy/2.0)-1,0,1);
     Graph GP(&WM.Wins[WM_Graph],0,0,10,40,{9,2,WM.MAIN->_maxx-12,(int)((float)WM.MAIN->_maxy/2.0)-7});
+#if HAVE_LIBNVIDIA_ML
     for (int i = 0; i < ChipNames.size()+nvDev.size(); i++)
     {
         GP.InitDataset();
     }
+#endif
     UserInterface UI(&WM.Wins[WM_Data],&GP);
     if (SensorNames.size() != MaxTemps.size())
     {
