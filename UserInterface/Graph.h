@@ -53,16 +53,16 @@ class Graph
     Rect Dimensions;
 
     std::vector<std::vector<struct fPoint>> Data;
-    std::vector<char> DataDraw;
+    std::vector<char> DataDraw {'*','*','*','*','*','*','*'};
 
     char xln;
     char yln;
     char xtck;
     char ytck;
-    std::vector<int> FGCOL;
-    std::vector<int> BGCOL;
+    std::vector<int> FGCOL {1,1,1,1,1,1,1};
+    std::vector<int> BGCOL {1,1,1,1,1,1,1};
 //    std::vector<int> LNCOL = {7};
-    std::vector<int> LNTYP;
+    std::vector<int> LNTYP {0,0,0,0,0,0,0};
 
     short unsigned int AxisFG = 7;
     short unsigned int AxisBG = 0;
@@ -120,6 +120,7 @@ Graph::Graph(HybridWindow *WIN, int xmn, int ymn, int xmx, int ymx, Rect Dim, ch
     }
     
     Dimensions = Dim;
+    Data.resize(7);
 
     xln = XLN;
     yln = YLN;

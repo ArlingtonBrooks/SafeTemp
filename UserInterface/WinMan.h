@@ -63,9 +63,9 @@ class HybridWindow
     bool border;
     chtype vBound, hBound;
     std::string TextBuffer;
-    std::vector<unsigned int> FGCOL;
-    std::vector<unsigned int> BGCOL;
-    std::vector<unsigned int> Mode;
+    std::vector<unsigned int> FGCOL {1,1,1,1,1,1,1};
+    std::vector<unsigned int> BGCOL {1,1,1,1,1,1,1};
+    std::vector<unsigned int> Mode {1,1,1,1,1,1};
     unsigned int resetCol = 0;
     bool Colours;
     WINDOW* MainWin;
@@ -269,9 +269,9 @@ void HybridWindow::DrawPixel(int XP, int YP, char disp, unsigned int FG = -1, un
     if (XP < w && YP < h && XP >= 0 && YP >= 0)
     {
 	TextBuffer[YP*(w-2*border) + XP] = disp;
-	if (FG >= 0) FGCOL[YP*(w-2*border) + XP] = FG;
-	if (BG >= 0) BGCOL[YP*(w-2*border) + XP] = BG;
-	else BGCOL[YP*(w-2*border) + XP] = resetCol;
+	//if (FG >= 0) FGCOL[YP*(w-2*border) + XP] = FG;
+	//if (BG >= 0) BGCOL[YP*(w-2*border) + XP] = BG;
+	//else BGCOL[YP*(w-2*border) + XP] = resetCol;
 	Mode[YP*(w-2*border) + XP] = mode;
     }
 };
@@ -404,8 +404,8 @@ void HybridWindow::DrawText(unsigned int XP, unsigned int YP, std::string Data, 
 	if (YP*(w-2*border) + XP + i < TextBuffer.length())
 	{
 	    TextBuffer[YP*(w-2*border) + XP + i] = (char)Data[i];
-	    if (Colours && FG >= 0) FGCOL[YP*(w-2*border) + XP + i] = FG;
-	    if (Colours && BG >= 0) BGCOL[YP*(w-2*border) + XP + i] = BG;
+	    //if (Colours && FG >= 0) FGCOL[YP*(w-2*border) + XP + i] = FG;
+	    //if (Colours && BG >= 0) BGCOL[YP*(w-2*border) + XP + i] = BG;
 	    Mode[YP*(w-2*border) + XP + i] = MODE;
 	}
     }

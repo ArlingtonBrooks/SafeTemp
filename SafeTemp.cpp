@@ -56,7 +56,7 @@ PLANNED UPDATES:
 #include <cstring>
 #include <vector>
 #include <cmath>
-#include <config.h>
+//#include <config.h>
 #if HAVE_LIBSENSORS //this should ALWAYS be true
 #include <sensors/sensors.h>
 #include <sensors/error.h>
