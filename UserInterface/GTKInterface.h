@@ -24,10 +24,10 @@ bool ReadGUIConfig(GUI::GUIDataHandler*);
 namespace GUI
 {
     /*
-    SensorLine:
+    SensormLine:
         An set of interface elements for the "databox" information
     */
-    const char* SensorLine = "<?xml version='1.0' encoding='UTF-8'?>"
+    const char* SensormLine = "<?xml version='1.0' encoding='UTF-8'?>"
         "<interface>"
         "  <requires lib='gtk+' version='3.20'/>"
         "  <object class='GtkBox' id='DataDisplay'>"
@@ -487,13 +487,13 @@ namespace GUI
                 fflush(Gnuplot);
             }
         };
-        bool NoPlotLine = 1;
+        bool NoPlotmLine = 1;
         for (int i = 0; i < Handle.SensorNames.size(); i++)
         {
-            if (Handle.SensorActive[i] && NoPlotLine)
+            if (Handle.SensorActive[i] && NoPlotmLine)
             {
                 fprintf(Gnuplot," plot $%s title \"%s\" with linespoints ls %d",Handle.SensorNames_NoSpace[i].c_str(),Handle.SensorNames[i].c_str(),i+1);
-                NoPlotLine = 0;
+                NoPlotmLine = 0;
             }
             else if (Handle.SensorActive[i])
                 fprintf(Gnuplot,", $%s title \"%s\" with linespoints ls %d",Handle.SensorNames_NoSpace[i].c_str(),Handle.SensorNames[i].c_str(),i+1);
@@ -645,7 +645,7 @@ namespace GUI
             Handle.SensorNames.push_back(std::string(SensorNames[i].c_str()));
             Handle.SensorCriticals.push_back(0); //MaxTemps is global
 
-            Builder = gtk_builder_new_from_string(SensorLine,-1);
+            Builder = gtk_builder_new_from_string(SensormLine,-1);
 
             Data.Add((SensorNames[i] + (std::string(std::to_string(i)))).c_str());
             Objects = (GObject**)realloc(Objects,(Data.size())*sizeof(GObject*));

@@ -92,8 +92,8 @@ class UserInterface
 /****************************************************************
 User Interface Constructor
 	Takes:
-	    *WIN: Pointer to Hybrid Window
-	    *GRP: Pointer to Graph
+	    *WIN: mPointer to Hybrid Window
+	    *GRP: mPointer to Graph
 	Builds the User Interface object
 ****************************************************************/
 UserInterface::UserInterface(HybridWindow *WIN, Graph *GRP)
@@ -225,11 +225,11 @@ void UserInterface::AppendSensorData(unsigned int Index, float DATA, int interva
 {
     if (TV_timer.tv_sec - LastTime >= interval || LastTime == StartTime) 
     {
-        fPoint DataPoint;
+        fmPoint DatamPoint;
         SensorData[Index].push_back(DATA);
-        DataPoint.x = TV_timer.tv_sec - StartTime;
-        DataPoint.y = DATA;
-        GG->AppendData(Index,DataPoint);
+        DatamPoint.x = TV_timer.tv_sec - StartTime;
+        DatamPoint.y = DATA;
+        GG->AppendData(Index,DatamPoint);
     }
 };
 

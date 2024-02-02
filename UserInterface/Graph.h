@@ -29,13 +29,13 @@ Graph Class
 #include <math.h>
 #include <ncurses.h>
 
-struct Point
+struct mPoint
 {
     int x;
     int y;
 };
 
-struct fPoint
+struct fmPoint
 {
     float x;
     float y;
@@ -45,14 +45,14 @@ class Graph
 {
     int xmin, ymin, xmax, ymax;
     int xsp, ysp;
-    Point Origin;
+    mPoint Origin;
     std::vector<float> xlabels;
     std::vector<float> ylabels;
     public:
     HybridWindow *win;
-    Rect Dimensions;
+    mRect Dimensions;
 
-    std::vector<std::vector<struct fPoint>> Data;
+    std::vector<std::vector<struct fmPoint>> Data;
     std::vector<char> DataDraw {'*','*','*','*','*','*','*'};
 
     char xln;
@@ -68,16 +68,16 @@ class Graph
     short unsigned int AxisBG = 0;
     short unsigned int AxisMod = A_NORMAL;
 
-    Graph(HybridWindow*, int, int, int, int, Rect, char, char, char, char);
+    Graph(HybridWindow*, int, int, int, int, mRect, char, char, char, char);
     void SetSpacing();
     void DrawToWindow();
-    int AppendData(std::vector<fPoint>, char, unsigned int, unsigned int, unsigned int);
-    int AppendData(unsigned int, fPoint);
+    int AppendData(std::vector<fmPoint>, char, unsigned int, unsigned int, unsigned int);
+    int AppendData(unsigned int, fmPoint);
     int InitDataset(char, unsigned int, unsigned int, unsigned int);
     void ChangeDataStream(unsigned int, char, unsigned int, unsigned int, unsigned int);
-    void Resize(Rect, int, int, int, int);
+    void Resize(mRect, int, int, int, int);
     void Resize(int, int, int, int);
-    void Resize(Rect);
+    void Resize(mRect);
     void AutoRecalcSize();
 };
 
@@ -87,7 +87,7 @@ Graph Constructor
 	    -Window to draw to
 	    -Minimum X and Y values
 	    -Maximum X and Y values
-	    -Dimensions of graph to draw to (Rect)
+	    -Dimensions of graph to draw to (mRect)
 	    -X-axis character
 	    -Y-axis character
 	    -X-axis tick mark character
@@ -96,7 +96,7 @@ Graph Constructor
 	    -Graph object with spacing and dimensions set to user
 	     restrictions
 ****************************************************************/
-Graph::Graph(HybridWindow *WIN, int xmn, int ymn, int xmx, int ymx, Rect Dim, char XLN = '-', char YLN = '|', char XTCK = '+', char YTCK = '+')
+Graph::Graph(HybridWindow *WIN, int xmn, int ymn, int xmx, int ymx, mRect Dim, char XLN = '-', char YLN = '|', char XTCK = '+', char YTCK = '+')
 {
     if (xmn < xmx) 
     {
@@ -250,7 +250,7 @@ AppendData
 	Appends data to the graph data vectors.  Allows user to 
 	    graph additional data.
 ****************************************************************/
-int Graph::AppendData(std::vector<fPoint> DAT, char DrawCH = '*', unsigned int FG = 7, unsigned int BG = 0, unsigned int MOD = A_NORMAL)
+int Graph::AppendData(std::vector<fmPoint> DAT, char DrawCH = '*', unsigned int FG = 7, unsigned int BG = 0, unsigned int MOD = A_NORMAL)
 {
     Data.resize(Data.size()+1);
     Data[Data.size()-1] = DAT;
@@ -261,7 +261,7 @@ int Graph::AppendData(std::vector<fPoint> DAT, char DrawCH = '*', unsigned int F
     return Data.size()-1;
 };
 
-int Graph::AppendData(unsigned int Index, fPoint DAT)
+int Graph::AppendData(unsigned int Index, fmPoint DAT)
 {
     Data[Index].push_back(DAT);
     return Data[Index].size()-1;
@@ -310,12 +310,12 @@ int Graph::InitDataset(char DrawCH = '*', unsigned int FG = 7, unsigned int BG =
 /****************************************************************
 Resize
 	Takes:
-	     -New Dimension Rectangle
+	     -New Dimension mRectangle
 	     -New maxima and minima
 	Returns:
 	     -Graph has new dimensions
 ****************************************************************/
-void Graph::Resize(Rect NewDim, int xmn, int ymn, int xmx, int ymx)
+void Graph::Resize(mRect NewDim, int xmn, int ymn, int xmx, int ymx)
 {
     Dimensions = NewDim;
     if (xmn < xmx) 
@@ -370,11 +370,11 @@ void Graph::Resize(int xmn, int ymn, int xmx, int ymx)
 /****************************************************************
 Resize
 	Takes:
-	    -New Dimension Rectangle
+	    -New Dimension mRectangle
 	Returns:
 	    -Graph has new dimensions with same maxima and minima
 ****************************************************************/
-void Graph::Resize(Rect NewDim)
+void Graph::Resize(mRect NewDim)
 {
     Dimensions = NewDim;
     SetSpacing();

@@ -39,6 +39,58 @@ Hybrid Window Library
 #include <ncurses.h>
 #include <string>
 #include <vector>
+#include "../Types.hpp"
+
+class ncursesWindow {
+protected:
+	WINDOW* m_Win;
+public:
+	WINDOW* GetHandle() {return m_Win;}
+	WinSize GetSize() {
+		WinSize Size;
+		getmaxyx(m_Win,Size.x,Size.y);
+		return Size;
+	}
+	void Redraw() {
+		touchwin(m_Win);
+		Refresh();
+	}
+	void Refresh() {
+		wrefresh(m_Win);
+	}
+};
+
+class SubWindow : public ncursesWindow {
+public:
+	SubWindow(int h, int w, int y, int x) {
+		m_Win = newwin(h,w,y,x);
+		box(m_Win, 0, 0);
+		Refresh();
+	}
+	~SubWindow() {
+		wclear(m_Win);
+		delwin(m_Win);
+	}
+	void Resize(Rect<int> NewSize) {
+		wresize(m_Win,NewSize.h, NewSize.w);
+		wmove(m_Win,NewSize.y,NewSize.x);
+		Refresh();
+	}
+};
+
+class MainWindow : public ncursesWindow {
+private: 
+	
+public:
+	std::vector<SubWindow> Windows;
+	MainWindow() {
+		m_Win = initscr();
+		timeout(8);
+	}
+	~MainWindow() {
+		endwin();
+	}
+};
 
 /****************************************************************
 Alignment Structure
@@ -189,7 +241,7 @@ void HybridWindow::MoveWin(int NewX, int NewY, int NewWidth = -1, int NewHeight 
 /****************************************************************
 draw
 	Takes:
-	    -Pointer to a Colour Pairs variable (in Manager)
+	    -mPointer to a Colour Pairs variable (in Manager)
 	Returns:
 	    -Draws window to screen as well as all information in
 	     the text, FGCOL, BGCOL, and MODE buffers.

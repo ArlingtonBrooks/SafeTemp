@@ -27,10 +27,10 @@ Window Manager Library
 #include "WinMan.h"
 
 /****************************************************************
-Line structure
+mLine structure
 	Defines start and end points of a line.
 ****************************************************************/
-struct Line
+struct mLine
 {
     int x1;
     int y1;
@@ -39,10 +39,10 @@ struct Line
 };
 
 /****************************************************************
-Rect structure
+mRect structure
 	Defines the position and dimensions of a rectangle.
 ****************************************************************/
-struct Rect
+struct mRect
 {
     int x;
     int y;
