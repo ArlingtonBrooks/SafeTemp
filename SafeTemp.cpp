@@ -56,6 +56,7 @@ PLANNED UPDATES:
 #include <cstring>
 #include <vector>
 #include <cmath>
+#include <stdexcept>
 //#include <config.h>
 #include <sensors/sensors.h> //lm_sensors-devel
 #include <sensors/error.h>   //lm_sensors-devel
@@ -204,51 +205,18 @@ int main(int argc,char** argv)
 	ChipNo = 0;
 	bool running = 1;
 
-	sensors_chip_name const * Chip;
-	sensors_feature const * feat;
-	sensors_subfeature const * subfeat;
+	TempSensor Sensors(nullptr);
+	std::vector<std::string> SensorNames;
+	for (unsigned i = 0; i != Sensors.GetNumberOfSensors(); i++) {
+		SensorNames.push_back(Sensors.GetSensorName(i));
+	}
+	std::vector<std::string> ChipNames = SensorNames;
 
-	vector<sensors_chip_name const*> ChipNames;
-	vector<sensors_feature const*> ChipFeats;
-	vector<sensors_subfeature const*> SubFeats;
-
-	/* Initialize libsensors and build an index of available temperature sensors */
-	ErrorNum = sensors_init(InArgs.File);
-	if (ErrorNum != 0)
-	{
-		fprintf(stderr,"An error has occurred on initialization: %s\n",sensors_strerror(ErrorNum));
-		return -1;
-	}
-	while ((Chip = sensors_get_detected_chips(NULL,&ChipNo)) != 0)
-	{
-		FeatNo = 0;
-		while ((feat = sensors_get_features(Chip,&FeatNo)) != 0)
-		{
-			if (feat->type == SENSORS_FEATURE_TEMP)
-			{
-				subfeat = sensors_get_subfeature(Chip,feat,SENSORS_SUBFEATURE_TEMP_INPUT);
-				ChipNames.push_back(Chip);
-				ChipFeats.push_back(feat);
-				SubFeats.push_back(subfeat);
-			}
-		}
-	}
-	if (ChipNames.size() == 0 || ChipFeats.size() == 0 || SubFeats.size() == 0)
-	{
-		fprintf(stderr,"Could not find sensors\n");
-		return -2;
-	}
+	if (Sensors.GetNumberOfSensors() == 0)
+		throw std::runtime_error("No sensors were found.");
 
 	/* Initialize User Interface */
 	SetHomeDirectory(InArgs);
-	vector<string> SensorNames;
-	for (int i = 0; i < ChipNames.size(); i++)
-	{
-		char* SensorLabel = sensors_get_label(ChipNames[i],ChipFeats[i]);
-		SensorNames.resize(i+1);
-		SensorNames[i] = string(SensorLabel);
-		free(SensorLabel);
-	}
 #if HAVE_LIBNVIDIA_ML
 	static_assert(false,"Nvidia ML has been temporarily disabled");
 	/*if (nv)
@@ -268,14 +236,14 @@ int main(int argc,char** argv)
 	}*/
 #endif
 	UserInterface UI(&WM.Wins[WM_Data],&GP);
-	if (SensorNames.size() != InArgs.MaxTemps.size())
+	if (Sensors.GetNumberOfSensors() != InArgs.MaxTemps.size())
 	{
-		for (int i = 0; i < SensorNames.size(); i++)
+		for (int i = 0; i < Sensors.GetNumberOfSensors(); i++)
 		{
 			InArgs.MaxTemps.push_back(0);
 		}
 	}
-	if (!UI.SetupValues(SensorNames.size(), SensorNames, InArgs.MaxTemps) && InArgs.UseUI)
+	if (!UI.SetupValues(Sensors.GetNumberOfSensors(), SensorNames, InArgs.MaxTemps) && InArgs.UseUI)
 	{
 		endwin();
 		fprintf(stderr,"ERROR: User Interface could not be configured.  Exiting...\n");
@@ -304,7 +272,7 @@ int main(int argc,char** argv)
 #endif
 	
 	/* Main Events Loop */
-	if (ChipNames.size() == ChipFeats.size() && ChipFeats.size() == SubFeats.size())
+	if (true)
 	{
 		double val;
 #if HAVE_NVIDIA_ML
@@ -312,15 +280,15 @@ int main(int argc,char** argv)
 			//double MaxTemp[ChipNames.size()+nvDev.size()];
 			//double MaxTime[ChipNames.size()+nvDev.size()];
 #else
-			double MaxTemp[ChipNames.size()];
-			double MaxTime[ChipNames.size()];
+			double MaxTemp[Sensors.GetNumberOfSensors()];
+			double MaxTime[Sensors.GetNumberOfSensors()];
 #endif
 		if (InArgs.Stats)
 		{
-			X_pts.resize(ChipNames.size());
-			Y_pts.resize(ChipNames.size());
-			Yp_pts.resize(ChipNames.size());
-			Ypp_pts.resize(ChipNames.size());
+			X_pts.resize(Sensors.GetNumberOfSensors());
+			Y_pts.resize(Sensors.GetNumberOfSensors());
+			Yp_pts.resize(Sensors.GetNumberOfSensors());
+			Ypp_pts.resize(Sensors.GetNumberOfSensors());
 		}
 
 		while (true)
@@ -330,7 +298,7 @@ int main(int argc,char** argv)
 			{
 				for (int i = 0; i < ChipNames.size(); i++)
 				{
-					sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
+					val = Sensors.GetTemperature(ChipNames[i]);
 					if (InArgs.Stats) X_pts[i].push_back(time(NULL));
 					if (InArgs.Stats) Y_pts[i].push_back(val);
 					if (InArgs.Stats && Y_pts[i].size() >= 2) Yp_pts[i].push_back(deriv(Y_pts[i][Y_pts.size()-2],Y_pts[i][Y_pts[i].size()-1],InArgs.TimeStep));
@@ -370,7 +338,7 @@ int main(int argc,char** argv)
 				{
 					for (int i = 0; i < ChipNames.size(); i++)
 					{
-						sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
+						GUI::Handle.AddData(Sensors.GetTemperature(ChipNames[i]),i);
 						UI.AppendSensorData(i,val,InArgs.TimeStep/1000000);
 					}
 #if HAVE_LIBNVIDIA_ML
@@ -397,8 +365,8 @@ int main(int argc,char** argv)
 				{
 					for (int i = 0; i < ChipNames.size(); i++)
 					{
-						sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
-						GUI::Handle.AddData((float)val,i);
+						//sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
+						GUI::Handle.AddData(Sensors.GetTemperature(ChipNames[i]),i);
 					}
 	#if HAVE_LIBNVIDIA_ML
 	static_assert(false,"Nvidia ML has been temporarily disabled");
@@ -426,7 +394,7 @@ int main(int argc,char** argv)
 
 			/* If User Interface is enabled, perform the required actions to process data */
 			if (InArgs.UseUI)
-			{
+			{ //FIXME: UI is broken somewhere in here;
 				UI.UpdateTimer(InArgs.TimeStep/1000000);
 				UI.TriggerDataGrab(InArgs.TimeStep/1000000);
 				CharBuffer = 0;
@@ -486,9 +454,6 @@ int main(int argc,char** argv)
 	static_assert(false,"Nvidia ML has been temporarily disabled");
 	//nvmlShutdown();
 #endif
-	ChipNames.clear();
-	ChipFeats.clear();
-	SubFeats.clear();
 	if (InArgs.File != NULL) fclose(InArgs.File);
 	if (InArgs.Temp != NULL) fclose(InArgs.Temp);
 	sensors_cleanup();

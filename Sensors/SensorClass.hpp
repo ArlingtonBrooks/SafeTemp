@@ -27,27 +27,32 @@ private:
 public:
 	/** @brief Initialize lm_sensors using the configuration file located at 'file' */
 	TempSensor(const char* file) {
-		FILE* F = fopen(file,"r");
+		FILE* F = nullptr;
+		if (file != nullptr) { F = fopen(file,"r"); }
 		int Errnum = sensors_init(F);
-		fclose(F);
+		if (F != nullptr) { fclose(F); }
 		if (Errnum != 0) { std::runtime_error("Unable to initialize sensors library."); }
 
 	        sensors_chip_name const* Chip;
 	        sensors_feature const* feat;
 	        sensors_subfeature const* subfeat;
 
-                int FeatNo = 0;
-		while ((feat = sensors_get_features(Chip,&FeatNo)) != 0)
-		{
-			if (feat->type == SENSORS_FEATURE_TEMP)
+                int FeatNo = 0; //FIXME
+		int ChipNo = 0; //FIXME
+		while ((Chip = sensors_get_detected_chips(NULL,&ChipNo)) != 0) { //FIXME
+			FeatNo = 0;
+			while ((feat = sensors_get_features(Chip,&FeatNo)) != 0) //FIXME
 			{
-				SensorPair SP;
-				subfeat = sensors_get_subfeature(Chip,feat,SENSORS_SUBFEATURE_TEMP_INPUT);
-				SP.Name = std::string(sensors_get_label(Chip,feat));
-				SP.Chip = Chip;
-				SP.Feature = feat;
-				SP.SubFeature = subfeat;
-				Chips.push_back(SP);
+				if (feat->type == SENSORS_FEATURE_TEMP)
+				{
+					SensorPair SP;
+					subfeat = sensors_get_subfeature(Chip,feat,SENSORS_SUBFEATURE_TEMP_INPUT);
+					SP.Name = std::string(sensors_get_label(Chip,feat));
+					SP.Chip = Chip;
+					SP.Feature = feat;
+					SP.SubFeature = subfeat;
+					Chips.push_back(SP);
+				}
 			}
 		}
 	}
