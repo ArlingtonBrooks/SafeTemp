@@ -134,7 +134,9 @@ void SetHomeDirectory(InputArguments &InArgs);
 
 void RunNCurses(InputArguments &InArgs) {
 	MainWindow Main;
-	Main.CreateSubWindow(15,15,5,5);
+	//Input InputHandler;
+	//Create UI and graph windows;
+	Main.CreateSubWindow("Graph",10,10,5,5);
 	Main.RefreshAll();
 	int i = getch();
 	while (i != 'q') {
@@ -145,6 +147,9 @@ void RunNCurses(InputArguments &InArgs) {
 
 int main(int argc,char** argv)
 {
+//	InputArguments A1;
+//		RunNCurses(A1);
+	return 0;
 	/* Check for the presence of libsensors package */
 	if (HAVE_LIBSENSORS != 1) 
 	{

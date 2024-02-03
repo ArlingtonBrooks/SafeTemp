@@ -39,6 +39,7 @@ Hybrid Window Library
 #include <ncurses.h>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #ifndef WINMAN_H_
 #define WINMAN_H_
 #include <memory>
@@ -77,12 +78,9 @@ class SubWindow : public ncursesWindow {
 protected:
 public:
 	SubWindow(int h, int w, int y, int x) {
-		set_handle(std::shared_ptr<WINDOW>(newwin(h,w,y,x),[](WINDOW* win){}));
+		//Set window handle; delete is handled by destructor;
+		set_handle(std::shared_ptr<WINDOW>(newwin(h,w,y,x),[](WINDOW* win){wclear(win); delwin(win);}));
 		box(m_Win.get(), 0, 0);
-	}
-	~SubWindow() {
-		wclear(m_Win.get());
-		delwin(m_Win.get());
 	}
 	void Resize(Rect<int> NewSize) {
 		wresize(m_Win.get(),NewSize.h, NewSize.w);
@@ -99,7 +97,8 @@ protected:
 public:
 	std::vector<SubWindow> Windows;
 	MainWindow() {
-		set_handle(std::shared_ptr<WINDOW>(initscr(),[](WINDOW* win){}));
+		//Set window handle; delete is handled by destructor;
+		set_handle(std::shared_ptr<WINDOW>(initscr(),[](WINDOW* win){endwin();}));
 		cbreak();
 		noecho();
 		curs_set(0);
@@ -107,9 +106,8 @@ public:
 	}
 	~MainWindow() {
 		Windows.clear();
-		endwin();
 	}
-	void CreateSubWindow(int h, int w, int y, int x) {
+	void CreateSubWindow(std::string WName, int h, int w, int y, int x) {
 		Windows.emplace_back(h,w,y,x);
 	}
 	virtual void Refresh() override {
