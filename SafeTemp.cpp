@@ -45,15 +45,10 @@ PLANNED UPDATES:
 				a file stream instead of lm_sensors
 ****************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <fstream>
 #include <iostream>
-#include <errno.h>
-#include <unistd.h>
 #include <thread>
 #include <string>
-#include <cstring>
 #include <vector>
 #include <cmath>
 #include <stdexcept>
@@ -129,20 +124,31 @@ const char* helptext = "tempsafe -p FILE -w TIME -i -v -f FILE -C SCRIPT \nsenso
 InputArguments ProcessArgs(int, char**);
 bool ParseTemp(InputArguments &InArgs);
 bool ProcessTemp(int,double, InputArguments &InArgs);
-double deriv(double,double,int);
+//double deriv(double,double,int);
 double avg(double, double);
-double EstMaxTemp(vector<double>, vector<double>, vector<double>, vector<time_t>, time_t StartTime);
-double EstMaxTime(vector<double>, vector<double>, vector<double>, vector<time_t>, time_t StartTime);
+//double EstMaxTemp(vector<double>, vector<double>, vector<double>, vector<time_t>, time_t StartTime);
+//double EstMaxTime(vector<double>, vector<double>, vector<double>, vector<time_t>, time_t StartTime);
 bool ReadConfig(UserInterface*, unsigned int, InputArguments &InArgs);
 bool WriteConfig(UserInterface*, InputArguments &InArgs);
 void SetHomeDirectory(InputArguments &InArgs);
+
+void RunNCurses(InputArguments &InArgs) {
+	MainWindow Main;
+	Main.CreateSubWindow(15,15,5,5);
+	Main.RefreshAll();
+	int i = getch();
+	while (i != 'q') {
+		i = getch();
+		Main.RefreshAll();
+	}
+}
 
 int main(int argc,char** argv)
 {
 	/* Check for the presence of libsensors package */
 	if (HAVE_LIBSENSORS != 1) 
 	{
-		printf("WARNING: lm_sensors must be installed for this program to work.\n\tPlease install lm_sensors and re-configure this package.\n\n");
+		std::cout << "WARNING: lm_sensors must be installed for this program to work.\n\tPlease install lm_sensors and re-configure this package.\n\n";
 		return -1;
 	}
 	
@@ -150,14 +156,19 @@ int main(int argc,char** argv)
 	InputArguments InArgs = ProcessArgs(argc,argv);
 	if (!InArgs.Success)
 	{
-		fprintf(stderr,"Failed to parse input.\n");
-		printf(helptext);
+		std::cerr << "Failed to parse input.\n";
+		std::cout << helptext;
 		return -3;
 	}
 	if (InArgs.UseUI && InArgs.UseGUI)
 	{
-		fprintf(stderr,"ERROR: -UI and --use-gtk cannot be used simultaneously\n");
+		std::cerr << "ERROR: -UI and --use-gtk cannot be used simultaneously\n";
 		return -4;
+	}
+
+	if (InArgs.UseUI) {
+		RunNCurses(InArgs);
+		return 0;
 	}
 
 	/* Statistics variables */
@@ -199,13 +210,7 @@ int main(int argc,char** argv)
 	}*/
 #endif
 
-	int ErrorNum;
-	int ChipNo;
-	int FeatNo;
-	ChipNo = 0;
-	bool running = 1;
-
-	TempSensor Sensors(nullptr);
+	lm_sensor Sensors(nullptr);
 	std::vector<std::string> SensorNames;
 	for (unsigned i = 0; i != Sensors.GetNumberOfSensors(); i++) {
 		SensorNames.push_back(Sensors.GetSensorName(i));
@@ -238,16 +243,15 @@ int main(int argc,char** argv)
 	UserInterface UI(&WM.Wins[WM_Data],&GP);
 	if (Sensors.GetNumberOfSensors() != InArgs.MaxTemps.size())
 	{
-		for (int i = 0; i < Sensors.GetNumberOfSensors(); i++)
-		{
+		for (unsigned i = 0; i < Sensors.GetNumberOfSensors(); i++) {
 			InArgs.MaxTemps.push_back(0);
 		}
 	}
 	if (!UI.SetupValues(Sensors.GetNumberOfSensors(), SensorNames, InArgs.MaxTemps) && InArgs.UseUI)
 	{
 		endwin();
-		fprintf(stderr,"ERROR: User Interface could not be configured.  Exiting...\n");
-		fprintf(stderr,"\tNumberOfSensors: %d\n\tNumber of Sensor Names: %d\n\tNumber of Critical Temperatures: %d\n",SensorNames.size(),SensorNames.size(),InArgs.MaxTemps.size());
+		std::cerr << "ERROR: User Interface could not be configured.  Exiting...\n";
+		std::cerr << "\tNumberOfSensors: " << SensorNames.size() << "\n\tNumber of Critical Temperatures: " << InArgs.MaxTemps.size() << "\n";
 		return -1;
 	}
 	if (InArgs.UseUI)
@@ -255,7 +259,7 @@ int main(int argc,char** argv)
 		if (!ReadConfig(&UI,SensorNames.size(),InArgs))
 		{
 			endwin();
-			fprintf(stderr,"Error loading config file ~/.config/TempSafe.cfg.  Exiting...\n");
+			std::cerr << "Error loading config file ~/.config/TempSafe.cfg.  Exiting...\n";
 		}
 	}
 	int CharBuffer = 0;
@@ -277,11 +281,7 @@ int main(int argc,char** argv)
 		double val;
 #if HAVE_NVIDIA_ML
 	static_assert(false,"Nvidia ML has been temporarily disabled");
-			//double MaxTemp[ChipNames.size()+nvDev.size()];
-			//double MaxTime[ChipNames.size()+nvDev.size()];
 #else
-			double MaxTemp[Sensors.GetNumberOfSensors()];
-			double MaxTime[Sensors.GetNumberOfSensors()];
 #endif
 		if (InArgs.Stats)
 		{
@@ -296,17 +296,12 @@ int main(int argc,char** argv)
 			/* Loop through all available sensors and perform relevant actions */
 			if (!InArgs.UseUI && !InArgs.UseGUI)
 			{
-				for (int i = 0; i < ChipNames.size(); i++)
+				for (unsigned i = 0; i < ChipNames.size(); i++)
 				{
 					val = Sensors.GetTemperature(ChipNames[i]);
 					if (InArgs.Stats) X_pts[i].push_back(time(NULL));
 					if (InArgs.Stats) Y_pts[i].push_back(val);
-					if (InArgs.Stats && Y_pts[i].size() >= 2) Yp_pts[i].push_back(deriv(Y_pts[i][Y_pts.size()-2],Y_pts[i][Y_pts[i].size()-1],InArgs.TimeStep));
-					if (InArgs.Stats && Yp_pts[i].size() >= 2) Ypp_pts[i].push_back(deriv(Yp_pts[i][Yp_pts.size()-2],Yp_pts[i][Yp_pts[i].size()-1],InArgs.TimeStep));
-					if (InArgs.Stats) MaxTemp[i] = EstMaxTemp(Y_pts[i],Yp_pts[i],Ypp_pts[i],X_pts[i],InArgs.StartTime);
-					if (InArgs.Stats) MaxTime[i] = EstMaxTime(Y_pts[i],Yp_pts[i],Ypp_pts[i],X_pts[i],InArgs.StartTime);
-					if (InArgs.PrtTmp) printf("Sensor %d: %f\n",i,val);
-					if (InArgs.PrtTmp && InArgs.Stats && Ypp_pts[i].size() >= 1) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[i],MaxTime[i],i);
+					if (InArgs.PrtTmp) std::cout << "Sensor " << i << ": " << val << "\n";
 					ProcessTemp(i,val,InArgs);
 				}
 #if HAVE_LIBNVIDIA_ML
@@ -336,7 +331,7 @@ int main(int argc,char** argv)
 			{
 				if (UI.TriggerSensors)
 				{
-					for (int i = 0; i < ChipNames.size(); i++)
+					for (unsigned i = 0; i < ChipNames.size(); i++)
 					{
 						GUI::Handle.AddData(Sensors.GetTemperature(ChipNames[i]),i);
 						UI.AppendSensorData(i,val,InArgs.TimeStep/1000000);
@@ -363,7 +358,7 @@ int main(int argc,char** argv)
 			{
 				if (GUI::Handle.GetTimeTrigger(InArgs.TimeStep/1000000))
 				{
-					for (int i = 0; i < ChipNames.size(); i++)
+					for (unsigned i = 0; i < ChipNames.size(); i++)
 					{
 						//sensors_get_value(ChipNames[i],SubFeats[i]->number,&val);
 						GUI::Handle.AddData(Sensors.GetTemperature(ChipNames[i]),i);
@@ -389,7 +384,7 @@ int main(int argc,char** argv)
 #endif
 
 
-			if (InArgs.PrtTmp && !InArgs.UseUI) printf("Finished Line\n");
+			if (InArgs.PrtTmp && !InArgs.UseUI) std::cout << "Finished Line\n";
 			if (!InArgs.run) break;
 
 			/* If User Interface is enabled, perform the required actions to process data */
@@ -438,7 +433,7 @@ int main(int argc,char** argv)
 	}
 	else 
 	{
-		fprintf(stderr,"Vector sizes uneven\n");
+		std::cerr << "Vector sizes uneven\n";
 		return -1;
 	}
 	/* Clean up on exit */
@@ -486,7 +481,7 @@ InputArguments ProcessArgs(int argc, char** argv)
 	for (int i = 1; i < argc; i++)
 	{
 		if (strcmp(argv[i],"-p") == 0) {InArgs.File = fopen(argv[i+1],"r"); i++;}
-		else if (strcmp(argv[i],"-h") == 0) {printf(helptext); InArgs.run = 0;}
+		else if (strcmp(argv[i],"-h") == 0) {std::cout << helptext; InArgs.run = 0;}
 		else if (strcmp(argv[i],"-w") == 0) {InArgs.TimeStep = (stoi(argv[i+1])*1000000); i++;}
 		else if (strcmp(argv[i],"-i") == 0) {InArgs.run = 0; InArgs.PrtTmp = 1;}
 		else if (strcmp(argv[i],"-f") == 0) 
@@ -495,7 +490,7 @@ InputArguments ProcessArgs(int argc, char** argv)
 			i++;
 			if (InArgs.Temp == NULL || !ParseTemp(InArgs)) 
 			{
-				fprintf(stderr,"Could not load temperatures: %s\n",strerror(errno));
+				std::cerr << "Could not load temperatures: " << strerror(errno) << "\n";
 				InArgs.Success = false;
 			}
 		}
@@ -506,10 +501,10 @@ InputArguments ProcessArgs(int argc, char** argv)
 		else if (strcmp(argv[i],"--use-gtk") == 0) InArgs.UseGUI = 1;
 		else if (argv[i][0] == '-')
 		{
-			for (int j = 1; j < string(argv[i]).length(); j++) 
+			for (unsigned j = 1; j != string(argv[i]).length(); j++) 
 			{
 				if (argv[i][j] == 'p') {InArgs.File = fopen(argv[i+1],"r"); i++;}
-				else if (argv[i][j] == 'h') {printf(helptext); InArgs.run = 0;}
+				else if (argv[i][j] == 'h') {std::cout << helptext; InArgs.run = 0;}
 				else if (argv[i][j] == 'w') {InArgs.TimeStep = (stoi(argv[i+1])*1000000); i++;}
 				else if (argv[i][j] == 'i') {InArgs.run = 0; InArgs.PrtTmp = 1;}
 				else if (strcmp(argv[i],"f") == 0) 
@@ -518,7 +513,7 @@ InputArguments ProcessArgs(int argc, char** argv)
 					i++;
 					if (InArgs.Temp == NULL || !ParseTemp(InArgs)) 
 					{
-						fprintf(stderr,"Could not load temperatures: %s\n",strerror(errno));
+						std::cerr << "Could not load temperatures: " << strerror(errno) << "\n";
 						InArgs.Success = false;
 					}
 				}
@@ -560,7 +555,7 @@ bool ParseTemp(InputArguments &InArgs)
 		InArgs.MaxTemps.at(InArgs.MaxTemps.size()-1) = stof(StrBuffer.c_str());
 	}
 	InArgs.MinTemp = InArgs.MaxTemps[0];
-	for (int i = 1; i < InArgs.MaxTemps.size(); i++)
+	for (unsigned i = 1; i != InArgs.MaxTemps.size(); i++)
 	{
 		if (InArgs.MaxTemps[i] < InArgs.MinTemp) InArgs.MinTemp = InArgs.MaxTemps[i];
 	}
@@ -590,11 +585,11 @@ bool ProcessTemp(int index,double value, InputArguments &InArgs)
 		InArgs.Prog = NULL;
 	}
 	if (InArgs.MaxTemps.size() == 0) return 1;
-	if (index <= InArgs.MaxTemps.size()-1)
+	if ((unsigned)index < InArgs.MaxTemps.size())
 	{
 		if (value >= InArgs.MaxTemps[index])
 		{
-			if (InArgs.PrtTmp) printf("Maximum temperature exceeded by sensor %d!\n",index);
+			if (InArgs.PrtTmp) std::cout << "Maximum temperature exceeded by sensor " << index << "\n";
 			if (InArgs.Command.length() > 0) InArgs.Prog = popen(InArgs.Command.c_str(),"r");
 			return 0;
 		}
@@ -604,30 +599,12 @@ bool ProcessTemp(int index,double value, InputArguments &InArgs)
 	{
 		if (value >= InArgs.MinTemp)
 		{
-			if (InArgs.PrtTmp) printf("Maximum temperature exceeded by sensor %d!\n",index);
+			if (InArgs.PrtTmp) std::cout << "Maximum temperature exceeded by sensor " << index << "\n";
 			if (InArgs.Command.length() > 0) InArgs.Prog = popen(InArgs.Command.c_str(),"r");
 			return 0;
 		}
 		else return 1;
 	}
-};
-
-/****************************************************************
-deriv:
-	Takes:
-		y1: temperature value preceeding y2 from sensor
-		y2: temperature value from sensor
-	Returns:
-		Time derivative of temperature between y1 and y2 over
-		a TimeStep.
-****************************************************************/
-double deriv(double y1, double y2, int TimeStep)
-{
-	if (TimeStep != 0)
-	{
-		return (y2 - y1)/((float)TimeStep/1000000.0);
-	}
-	else return 0;
 };
 
 /****************************************************************
@@ -641,77 +618,6 @@ avg:
 double avg(double x1, double x2)
 {
 	return (x1+x2)/2;
-};
-
-/****************************************************************
-EstMaxTemp:
-	Takes:
-		y: vector of temperatures
-		yp: vector of temperature time derivatives
-		ypp: vector of temperature second time derivatives
-		t: values of time
-	Returns:
-		An estimate of the maximum temperature that will be
-		reached by the sensor whose data is given
-
-	This function estimates the 98% maximum temperature based
-		on the assumption of exponential decay with a 
-		function T = a + b*e^(c*t).  
-	The function calculates an exponential curve that fits
-		three of the most recent points.  This is very
-		open to errors based on noise and should not
-		be trusted 100%.  
-	I am thinking of instead performing some statistical
-		analysis of the data to get a best-fit exponential
-		curve, or perhaps removing this function outright.
-	As of March 2016, this function is no longer available.
-****************************************************************/
-double EstMaxTemp(vector<double> y, vector<double> yp, vector<double> ypp, vector<time_t> t, time_t StartTime)
-{
-	if (y.size() < 3 || yp.size() < 2 || ypp.size() < 1 || t.size() < 3) return 0;
-	if (ypp[ypp.size()-1] == 0 || avg(yp[yp.size()-2],yp[yp.size()-1]) == 0) return  y[y.size()-1]; //suggests maximum
-
-	double x = (float)t[t.size()-2] - (float)StartTime;
-	double c = ypp[ypp.size()-1]/avg(yp[yp.size()-2],yp[yp.size()-1]);
-	if (c == 0) {return y[y.size()-1];}
-	double b = avg(yp[yp.size()-2],yp[yp.size()-1])/(c*exp(c*x));
-	if (b == 0) {return y[y.size()-1];}
-	double a = y[y.size()-2] - b*exp(c*x);
-
-	//Tmax occurs as t -> inf, so if c is negative, Tmax -> a.  If c = 0 or b = 0: we're likely at maximum
-	if (c < 0) return a;
-	else return y[y.size()-1]; //we're likely just at startup if this happens; result is unreliable
-};
-
-/****************************************************************
-EstMaxTime
-	Takes:
-		y: vector of temperatures
-		yp: vector of temperature time derivatives
-		ypp: vector of temperature second time derivatives
-		t: values of time
-	Returns:
-		An estimate of the time at which 98% maximum
-		temperature will be reached.
-
-	See comments for EstMaxTemp for more information.
-	As of March 2016, this function is no longer available.
-****************************************************************/
-double EstMaxTime(vector<double> y, vector<double> yp, vector<double> ypp, vector<time_t> t, time_t StartTime)
-{
-	if (y.size() < 3 || yp.size() < 2 || ypp.size() < 1 || t.size() < 3) return 0;
-	if (ypp[ypp.size()-1] == 0 || avg(yp[yp.size()-2],yp[yp.size()-1]) == 0) return 0; //suggests maximum
-
-	double x = (float)t[t.size()-2] - (float)StartTime;
-	double c = ypp[ypp.size()-1]/avg(yp[yp.size()-2],yp[yp.size()-1]);
-	if (c == 0) return 0;
-	double b = avg(yp[yp.size()-2],yp[yp.size()-1])/(c*exp(c*x));
-	if (b == 0) return 0;
-	double a = y[y.size()-2] - b*exp(c*x);
-
-	//Tmax occurs as t -> inf, so if c is negative, Tmax -> a.  If c = 0 or b = 0: we're likely at maximum
-	if (c > 0) return 0;
-	else return -(4.0/c) + (float)x;
 };
 
 #include <sys/types.h>
@@ -774,7 +680,7 @@ bool ReadConfig(UserInterface* UI, unsigned int NumSensors, InputArguments &InAr
 				BUFFER = fgetc(f);
 				if (BUFFER == '.' && i < 2) 
 				{
-					fprintf(stderr,"ERROR: inputs in TempSafe.cfg cannot be decimal numbers.\n");
+					std::cerr << "ERROR: inputs in TempSafe.cfg cannot be decimal numbers.\n";
 					fclose(f);
 					return 0;
 				}
@@ -792,26 +698,26 @@ bool ReadConfig(UserInterface* UI, unsigned int NumSensors, InputArguments &InAr
 
 	if (CritTemps.size() != Colours.size() || Colours.size() != Commands.size() || Commands.size() != CritTemps.size())
 	{
-		fprintf(stderr,"ERROR: TempSafe.cfg has incomplete lines.\n");
+		std::cerr << "ERROR: TempSafe.cfg has incomplete lines.\n";
 		fclose(f);
 		return 0;
 	}
 	if (CritTemps.size() > NumSensors)
 	{
-		fprintf(stderr,"ERROR: TempSafe.cfg has too many config lines.\n");
+		std::cerr << "ERROR: TempSafe.cfg has too many config lines.\n";
 		fclose(f);
 		return 0;
 	}
 	else if (CritTemps.size() < NumSensors)
 	{
-		fprintf(stderr,"ERROR: TempSafe.cfg has too few config lines.\n");
+		std::cerr << "ERROR: TempSafe.cfg has too few config lines.\n";
 		fclose(f);
 		return 0;
 	}
 	
 	if (!UI->SetupValues(CritTemps,Colours,Commands))
 	{
-		fprintf(stderr,"ERROR: Failed to load TempSafe.cfg into vectors.\n");
+		std::cerr << "ERROR: Failed to load TempSafe.cfg into vectors.\n";
 		fclose(f);
 		return 0;
 	}
@@ -843,7 +749,7 @@ bool WriteConfig(UserInterface* UI, InputArguments &InArgs)
 	vector<string> Commands = UI->GetCommands();
 	vector<unsigned int> SensColours = UI->GetSensorColours();
 
-	for (int i = 0; i < CritTemps.size(); i++)
+	for (unsigned i = 0; i != CritTemps.size(); i++)
 	{
 		char BufferString[512]; //anything this long should be a shell script instead
 		sprintf(BufferString,"%d,%d,%s\n",CritTemps[i],SensColours[i],Commands[i].c_str());
@@ -866,12 +772,12 @@ bool WriteConfig(UserInterface* UI, InputArguments &InArgs)
 		}
 	}
 
-	fprintf(stderr,"Configuration changed.  Writing changes...\n");
+	std::cerr << "Configuration changed.  Writing changes...\n";
 	remove(ConfLoc.c_str());
 	conf = fopen(ConfLoc.c_str(),"w+");
 	if (conf == NULL)
 	{
-		fprintf(stderr,"ERROR: Could not open %s for writing.\n",ConfLoc.c_str());
+		std::cerr << "ERROR: Could not open " << ConfLoc.c_str() << "for writing.\n";
 	}
 	else
 	{
@@ -879,6 +785,7 @@ bool WriteConfig(UserInterface* UI, InputArguments &InArgs)
 		fclose(conf);
 		return 1;
 	}
+	return 0;
 }
 
 /*
@@ -925,9 +832,9 @@ bool SaveGUIConfig(GUI::GUIDataHandler *Handle)
 
 	int NumSensors = Handle->SensorNames.size();
 	f_out.write((char*)&NumSensors,sizeof(int));
-	for (int i = 0; i < Handle->SensorNames.size(); i++)
+	for (unsigned i = 0; i != Handle->SensorNames.size(); i++)
 	{
-		for (int j = 0; j < Handle->SensorNames[i].length(); j++)
+		for (unsigned j = 0; j != Handle->SensorNames[i].length(); j++)
 		{
 			f_out.write((char*)&Handle->SensorNames[i][j],sizeof(char));
 		}
@@ -939,9 +846,9 @@ bool SaveGUIConfig(GUI::GUIDataHandler *Handle)
 		f_out.write((char*)&TMP_Colour,sizeof(unsigned int));
 		f_out.write((char*)&TMP_Critical,sizeof(float));
 		f_out.write((char*)&TMP_Active,sizeof(char));
-		for (int j = 0; j < Handle->SensorCommands[i].length(); j++)
+		for (unsigned k = 0; k < Handle->SensorCommands[i].length(); k++)
 		{
-			f_out.write((char*)&Handle->SensorCommands[i][j],sizeof(char));
+			f_out.write((char*)&Handle->SensorCommands[i][k],sizeof(char));
 		}
 		f_out.write(&NullChar,sizeof(char));
 	}
@@ -1011,7 +918,7 @@ bool ReadGUIConfig(GUI::GUIDataHandler *Handle)
 	}
 	else
 	{
-		fprintf(stderr,"[Load Config]: %s: Unrecognized file format %s.\n",ConfFile.c_str(),Signature);
+		std::cerr << "[Load config]: " << ConfFile.c_str() << ": unrecognized file format " << Signature << "\n";
 		return 0;
 	}
 	f_in.close();

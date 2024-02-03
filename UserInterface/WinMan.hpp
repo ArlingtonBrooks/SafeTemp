@@ -53,6 +53,7 @@ Hybrid Window Library
 class ncursesWindow {
 protected:
 	std::shared_ptr<WINDOW> m_Win;
+	void set_handle(std::shared_ptr<WINDOW> Win) { m_Win = Win; }
 public:
 	std::shared_ptr<WINDOW> GetHandle() {return m_Win;}
 	WinSize GetSize() {
@@ -64,7 +65,7 @@ public:
 		touchwin(m_Win.get());
 		Refresh();
 	}
-	void Refresh() {
+	virtual void Refresh() {
 		wrefresh(m_Win.get());
 	}
 };
@@ -73,11 +74,11 @@ public:
  * @brief A subwindow to be contained within a MainWindow class
  */
 class SubWindow : public ncursesWindow {
+protected:
 public:
 	SubWindow(int h, int w, int y, int x) {
-		m_Win = std::make_shared<WINDOW>(*newwin(h,w,y,x));
+		set_handle(std::shared_ptr<WINDOW>(newwin(h,w,y,x),[](WINDOW* win){}));
 		box(m_Win.get(), 0, 0);
-		Refresh();
 	}
 	~SubWindow() {
 		wclear(m_Win.get());
@@ -94,17 +95,30 @@ public:
  * @brief The global main window
  */
 class MainWindow : public ncursesWindow {
-private: 
-	
+protected:
 public:
 	std::vector<SubWindow> Windows;
 	MainWindow() {
-		WINDOW* Win = initscr();
-		m_Win = std::make_shared<WINDOW>(*Win);
+		set_handle(std::shared_ptr<WINDOW>(initscr(),[](WINDOW* win){}));
+		cbreak();
+		noecho();
+		curs_set(0);
 		timeout(8);
 	}
 	~MainWindow() {
+		Windows.clear();
 		endwin();
+	}
+	void CreateSubWindow(int h, int w, int y, int x) {
+		Windows.emplace_back(h,w,y,x);
+	}
+	virtual void Refresh() override {
+		wrefresh(m_Win.get());
+		refresh();
+	}
+	void RefreshAll() {
+		Refresh();
+		for (auto &i : Windows) i.Refresh();
 	}
 };
 #endif //WINMAN_H_

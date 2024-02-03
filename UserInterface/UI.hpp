@@ -20,7 +20,6 @@ User Interface Library
 	the User Interface in the terminal.  
 ****************************************************************/
 #include <memory>
-#include <stdio.h>
 #include <sys/time.h>
 
 #include "Manager.hpp"
