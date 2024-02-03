@@ -25,9 +25,73 @@ Graph Class
 	    graph buffer which can be later drawn to "window".
 ****************************************************************/
 //#include "WinMan.h"
+#include <string>
 #include <vector>
 #include <math.h>
 #include <ncurses.h>
+
+/**
+ * @brief A basic data structure containing data for a plot
+ */
+template <typename DataType = float>
+struct GraphData {
+	std::vector<Point<DataType>> Points;
+	std::string Name;
+	int Colour = 0;
+	char Symbol = 0;
+};
+
+/**
+ * @brief An interface template data structure for a graph
+ */
+template <typename DataType = float>
+class baseGraph {
+private:
+	auto FindByName(std::string const &Name) {
+		auto IsEqualPoint = [](GraphData<DataType> const &GD, std::string const &N) {
+			return N == GD.Name;
+		};
+		return std::find(Data.begin(),Data.end(),Name,IsEqualPoint);
+	}
+public:
+	enum class Axis {
+		X,
+		Y,
+		Z
+	};
+	std::vector<GraphData<DataType>> Data;
+	DataType Xmin = 0, Xmax = 0;
+	DataType Ymin = 0, Ymax = 0;
+	
+	virtual void DrawAxis(Axis A, std::string const &Label) = 0;
+	virtual void DrawPoints(std::string const &DataName, char Symbol, int Colour) = 0;
+	virtual void DrawLines(std::string const &DataName, bool Dashed, int Colour) = 0;
+	virtual void DrawLegend() = 0;
+	void AddPlot(std::string const &Name, int Colour, char Symbol) {
+		auto IT = FindByName(Name);
+		if (IT == Data.end()) {
+			Data.emplace_back({},Name,0,0);
+		}
+	}
+	void SetColour(std::string const &Name, int Col) {
+		auto IT = FindByName(Name);
+		if (IT != Data.end())
+			IT->Colour = Col;
+	}
+	void SetSymbol(std::string const &Name, char Sym) {
+		auto IT = FindByName(Name);
+		if (IT != Data.end())
+			IT->Symbol = Sym;
+	}
+	void AppendData(Point<DataType> Pt, std::string const &Name) {
+		auto IT = FindByName(Name);
+		if (IT == Data.end()) {
+			Data.emplace_back({Pt},Name,0,0);
+		} else {
+			*IT.Points.push_back(Pt);
+		}
+	}
+};
 
 struct mPoint
 {

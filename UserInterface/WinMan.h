@@ -39,58 +39,72 @@ Hybrid Window Library
 #include <ncurses.h>
 #include <string>
 #include <vector>
+#ifndef WINMAN_H_
+#define WINMAN_H_
+#include <memory>
 #include "../Types.hpp"
 
+/**
+ * @brief A generic ncurses window
+ */
 class ncursesWindow {
 protected:
-	WINDOW* m_Win;
+	std::shared_ptr<WINDOW> m_Win;
 public:
-	WINDOW* GetHandle() {return m_Win;}
+	std::shared_ptr<WINDOW> GetHandle() {return m_Win;}
 	WinSize GetSize() {
 		WinSize Size;
-		getmaxyx(m_Win,Size.x,Size.y);
+		getmaxyx(m_Win.get(),Size.x,Size.y);
 		return Size;
 	}
 	void Redraw() {
-		touchwin(m_Win);
+		touchwin(m_Win.get());
 		Refresh();
 	}
 	void Refresh() {
-		wrefresh(m_Win);
+		wrefresh(m_Win.get());
 	}
 };
 
+/**
+ * @brief A subwindow to be contained within a MainWindow class
+ */
 class SubWindow : public ncursesWindow {
 public:
 	SubWindow(int h, int w, int y, int x) {
-		m_Win = newwin(h,w,y,x);
-		box(m_Win, 0, 0);
+		m_Win = std::make_shared<WINDOW>(*newwin(h,w,y,x));
+		box(m_Win.get(), 0, 0);
 		Refresh();
 	}
 	~SubWindow() {
-		wclear(m_Win);
-		delwin(m_Win);
+		wclear(m_Win.get());
+		delwin(m_Win.get());
 	}
 	void Resize(Rect<int> NewSize) {
-		wresize(m_Win,NewSize.h, NewSize.w);
-		wmove(m_Win,NewSize.y,NewSize.x);
+		wresize(m_Win.get(),NewSize.h, NewSize.w);
+		wmove(m_Win.get(),NewSize.y,NewSize.x);
 		Refresh();
 	}
 };
 
+/**
+ * @brief The global main window
+ */
 class MainWindow : public ncursesWindow {
 private: 
 	
 public:
 	std::vector<SubWindow> Windows;
 	MainWindow() {
-		m_Win = initscr();
+		WINDOW* Win = initscr();
+		m_Win = std::make_shared<WINDOW>(*Win);
 		timeout(8);
 	}
 	~MainWindow() {
 		endwin();
 	}
 };
+#endif //WINMAN_H_
 
 /****************************************************************
 Alignment Structure

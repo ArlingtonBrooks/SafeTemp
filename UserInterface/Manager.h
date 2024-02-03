@@ -26,6 +26,50 @@ Window Manager Library
 #include <unistd.h>
 #include "WinMan.h"
 
+/** @brief A data structure containing a user's UI selection */
+struct Selection {
+	int Row = 0;
+	int Col = 0;
+};
+
+/** @brief An interface for user input handling */
+class Input {
+public:
+	enum class Key {
+		Left,
+		Right,
+		Up,
+		Down
+	};
+private:
+	void ChangeSelection(Key K) {
+		switch (K) {
+		case Key::Left: {
+			if (Cursor.Col == 0) { Cursor.Col = NCols - 1; }
+			else { Cursor.Col -= 1; }
+		}
+		case Key::Right: {
+			if (Cursor.Col == NCols - 1) { Cursor.Col = 0; }
+			else { Cursor.Col += 1; }
+		}
+		case Key::Up: {
+			if (Cursor.Row == 0) { Cursor.Row = NRows - 1; }
+			else { Cursor.Row -= 1; }
+		}
+		case Key::Down: {
+			if (Cursor.Row == NRows - 1) { Cursor.Row = 0; }
+			else { Cursor.Row += 1; }
+		}
+		}
+	}
+public:
+	Selection Cursor;
+	int NRows = 0;
+	int NCols = 0;
+	virtual int GetKey() = 0;
+	virtual int ProcessKey(int Keyval) = 0;
+};
+
 /****************************************************************
 mLine structure
 	Defines start and end points of a line.
