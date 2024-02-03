@@ -23,8 +23,8 @@ User Interface Library
 #include <stdio.h>
 #include <sys/time.h>
 
-#include "Manager.h"
-#include "Graph.h"
+#include "Manager.hpp"
+#include "Graph.hpp"
 
 class CursesGraph : public baseGraph<float> {
 private:

@@ -16,7 +16,7 @@ Graphical User Interface
 
 #if HAVE_GTK == 1 && HAVE_GNUPLOT == 1
 #include <gtk/gtk.h>
-#include "GuiDataHandler.h"
+#include "GuiDataHandler.hpp"
 
 bool SaveGUIConfig(GUI::GUIDataHandler*);
 bool ReadGUIConfig(GUI::GUIDataHandler*);

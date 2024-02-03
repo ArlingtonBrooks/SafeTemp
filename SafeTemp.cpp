@@ -57,19 +57,18 @@ PLANNED UPDATES:
 #include <vector>
 #include <cmath>
 //#include <config.h>
-#if HAVE_LIBSENSORS //this should ALWAYS be true
-#include <sensors/sensors.h>
-#include <sensors/error.h>
-#endif
+#include <sensors/sensors.h> //lm_sensors-devel
+#include <sensors/error.h>   //lm_sensors-devel
 #if HAVE_LIBNVIDIA_ML
 #include <NVCtrl/NVCtrl.h>
 #include <nvml.h>
 #endif
 
-#include "UserInterface/Manager.h"
-#include "UserInterface/Graph.h"
-#include "UserInterface/UI.h"
-#include "UserInterface/GTKInterface.h"
+#include "UserInterface/Manager.hpp"
+#include "UserInterface/Graph.hpp"
+#include "UserInterface/UI.hpp"
+#include "UserInterface/GTKInterface.hpp"
+#include "Sensors/SensorClass.hpp"
 using namespace std;
 
 /****************************************************************
@@ -168,7 +167,8 @@ int main(int argc,char** argv)
 
 	/* Initialize NVidia devices if installed */
 #if HAVE_LIBNVIDIA_ML
-	bool nv = true;
+	static_assert(false,"Nvidia ML has been temporarily disabled");
+	/*bool nv = true;
 	unsigned int nvDevCount;
 	vector<nvmlDevice_t> nvDev;
 	unsigned int nvTempTmp = 0;
@@ -195,7 +195,7 @@ int main(int argc,char** argv)
 		{
 			if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) nvDev.erase(nvDev.begin()+i);
 		}
-	}
+	}*/
 #endif
 
 	int ErrorNum;
@@ -250,20 +250,22 @@ int main(int argc,char** argv)
 		free(SensorLabel);
 	}
 #if HAVE_LIBNVIDIA_ML
-	if (nv)
+	static_assert(false,"Nvidia ML has been temporarily disabled");
+	/*if (nv)
 	{
 		for (int i = 0; i < nvDev.size(); i++) SensorNames.push_back("NVidia Device");
-	}
+	}*/
 #endif
 	Manager WM;
 	int WM_Graph = WM.AddWin(0,0,WM.MAIN->_maxx,(int)((float)WM.MAIN->_maxy/2.0)-2,1,0);
 	int WM_Data = WM.AddWin(0,(int)((float)WM.MAIN->_maxy/2.0)+2,WM.MAIN->_maxx,(int)((float)WM.MAIN->_maxy/2.0)-1,0,1);
 	Graph GP(&WM.Wins[WM_Graph],0,0,10,40,{9,2,WM.MAIN->_maxx-12,(int)((float)WM.MAIN->_maxy/2.0)-7});
 #if HAVE_LIBNVIDIA_ML
-	for (int i = 0; i < ChipNames.size()+nvDev.size(); i++)
+	static_assert(false,"Nvidia ML has been temporarily disabled");
+	/*for (int i = 0; i < ChipNames.size()+nvDev.size(); i++)
 	{
 		GP.InitDataset();
-	}
+	}*/
 #endif
 	UserInterface UI(&WM.Wins[WM_Data],&GP);
 	if (SensorNames.size() != InArgs.MaxTemps.size())
@@ -306,8 +308,9 @@ int main(int argc,char** argv)
 	{
 		double val;
 #if HAVE_NVIDIA_ML
-			double MaxTemp[ChipNames.size()+nvDev.size()];
-			double MaxTime[ChipNames.size()+nvDev.size()];
+	static_assert(false,"Nvidia ML has been temporarily disabled");
+			//double MaxTemp[ChipNames.size()+nvDev.size()];
+			//double MaxTime[ChipNames.size()+nvDev.size()];
 #else
 			double MaxTemp[ChipNames.size()];
 			double MaxTime[ChipNames.size()];
@@ -339,9 +342,10 @@ int main(int argc,char** argv)
 					ProcessTemp(i,val,InArgs);
 				}
 #if HAVE_LIBNVIDIA_ML
-				if (nv) //NVIDIA GPU data
+	static_assert(false,"Nvidia ML has been temporarily disabled");
+				/*if (nv) //NVIDIA GPU data
 				{
-					/*Loop through all nvidia chips and perform relevant actions */
+					//Loop through all nvidia chips and perform relevant actions
 					for (int i = 0; i < nvDev.size(); i++)
 					{
 						if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size());
@@ -357,7 +361,7 @@ int main(int argc,char** argv)
 						if (InArgs.PrtTmp && Stats && Ypp_pts[ChipNames.size() + i].size() >= 1) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[ChipNames.size() + i],MaxTime[ChipNames.size() + i],ChipNames.size() + i);
 						ProcessTemp(ChipNames.size() + i,val,InArgs);
 					}
-				}
+				}*/
 #endif
 			}
 			else if (InArgs.UseUI)//UseUI OR UseGUI
@@ -370,9 +374,10 @@ int main(int argc,char** argv)
 						UI.AppendSensorData(i,val,InArgs.TimeStep/1000000);
 					}
 #if HAVE_LIBNVIDIA_ML
-					if (nv) //NVIDIA GPU data
+	static_assert(false,"Nvidia ML has been temporarily disabled");
+					/*if (nv) //NVIDIA GPU data
 					{
-						/*Loop through all nvidia chips and perform relevant actions */
+						//Loop through all nvidia chips and perform relevant actions
 						for (int i = 0; i < nvDev.size(); i++)
 						{
 							if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size() + i);
@@ -380,7 +385,7 @@ int main(int argc,char** argv)
 							//NV_CTRL_THERMAL_SENSOR_READING;
 							UI.AppendSensorData(ChipNames.size()+i,val,InArgs.TimeStep/1000000);
 						}
-					}
+					}*/
 #endif
 
 				}
@@ -396,9 +401,10 @@ int main(int argc,char** argv)
 						GUI::Handle.AddData((float)val,i);
 					}
 	#if HAVE_LIBNVIDIA_ML
-					if (nv) //NVIDIA GPU data
+	static_assert(false,"Nvidia ML has been temporarily disabled");
+					/*if (nv) //NVIDIA GPU data
 					{
-						/*Loop through all nvidia chips and perform relevant actions */
+						// Loop through all nvidia chips and perform relevant actions
 						for (int i = 0; i < nvDev.size(); i++)
 						{
 							if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size() + i);
@@ -407,7 +413,7 @@ int main(int argc,char** argv)
 							GUI::Handle.AddData((float)val,ChipNames.size()+i);
 //							UI.AppendSensorData(ChipNames.size()+i,val,TimeStep/1000000);
 						}
-					}
+					}*/
 	#endif
 					g_idle_add((GSourceFunc)GUI::replot,GUI::Objects);
 				}
@@ -477,7 +483,8 @@ int main(int argc,char** argv)
 		InArgs.Prog = NULL;
 	}
 #if HAVE_LIBNVIDIA_ML
-	nvmlShutdown();
+	static_assert(false,"Nvidia ML has been temporarily disabled");
+	//nvmlShutdown();
 #endif
 	ChipNames.clear();
 	ChipFeats.clear();

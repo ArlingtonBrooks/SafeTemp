@@ -24,7 +24,7 @@ Window Manager Library
 #include <ncurses.h>
 #include <vector>
 #include <unistd.h>
-#include "WinMan.h"
+#include "WinMan.hpp"
 
 #ifndef UI_MANAGER_H_
 #define UI_MANAGER_H_
