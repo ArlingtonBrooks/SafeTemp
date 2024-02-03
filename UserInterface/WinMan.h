@@ -44,6 +44,9 @@ Hybrid Window Library
 #include <memory>
 #include "../Types.hpp"
 
+#ifndef UI_HYBRID_WIN_H_
+#define UI_HYBRID_WIN_H_
+
 /**
  * @brief A generic ncurses window
  */
@@ -550,3 +553,4 @@ void HybridWindow::DrawAlignedText(Alignment TYPE, std::string TEXT, int FG = -1
         default: break;
     }
 };
+#endif //UI_HYBRID_WIN_H_

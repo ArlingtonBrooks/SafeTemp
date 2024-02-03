@@ -19,8 +19,25 @@ User Interface Library
 	This file contains all information relating to drawing
 	the User Interface in the terminal.  
 ****************************************************************/
+#include <memory>
 #include <stdio.h>
 #include <sys/time.h>
+
+#include "Manager.h"
+#include "Graph.h"
+
+class CursesGraph : public baseGraph<float> {
+private:
+	ncursesWindow *m_Win; //non-owning pointer to a ncurses window;
+public:
+	CursesGraph(ncursesWindow *Win) {
+		m_Win = Win;
+	}
+	void DrawAxis(baseGraph<float>::Axis A, std::string const &Label) override { throw 1; }
+	void DrawPoints(std::string const &DataName, char Symbol, int Colour) override { throw 1; }
+	void DrawLines(std::string const &DataName, bool Dashed, int Colour) override { throw 1; }
+	void DrawLegend() override { throw 1; }
+};
 
 struct CursXY
 {

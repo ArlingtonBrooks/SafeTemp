@@ -25,6 +25,8 @@ Graph Class
 	    graph buffer which can be later drawn to "window".
 ****************************************************************/
 //#include "WinMan.h"
+#ifndef UI_GRAPH_H_
+#define UI_GRAPH_H_
 #include <string>
 #include <vector>
 #include <math.h>
@@ -498,3 +500,5 @@ void Graph::AutoRecalcSize()
     }
     SetSpacing();
 };
+
+#endif //UI_GRAPH_H_

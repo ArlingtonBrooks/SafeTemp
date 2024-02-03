@@ -26,6 +26,9 @@ Window Manager Library
 #include <unistd.h>
 #include "WinMan.h"
 
+#ifndef UI_MANAGER_H_
+#define UI_MANAGER_H_
+
 /** @brief A data structure containing a user's UI selection */
 struct Selection {
 	int Row = 0;
@@ -233,3 +236,4 @@ void Manager::RedrawWindow(int i)
     touchwin(MAIN);
     Wins[i].draw(&ColorPairs);
 }
+#endif //UI_MANAGER_H_
