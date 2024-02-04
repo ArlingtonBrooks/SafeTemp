@@ -20,12 +20,20 @@ struct TempPair {
 	float Temp;
 };
 
+struct SensorDetailLine {
+	std::string FriendlyName;
+	TempPair TempData;
+	float CritTemp;
+	std::string Command;
+};
+
 class temperature_sensor_set {
 public:
 	virtual std::vector<TempPair> GetAllTemperatures() = 0;
 	virtual float GetTemperature(std::string const &SensorName) = 0;
 	virtual float GetTemperature(unsigned index) = 0;
 	virtual unsigned GetNumberOfSensors() const = 0;
+	virtual ~temperature_sensor_set() = default;
 };
 
 //TODO: put nvidia sensors here;

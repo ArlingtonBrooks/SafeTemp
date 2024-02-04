@@ -23,17 +23,12 @@ Window Manager Library
 #include <stdio.h>
 #include <ncurses.h>
 #include <vector>
+#include <unordered_map>
 #include <unistd.h>
 #include "WinMan.hpp"
 
 #ifndef UI_MANAGER_H_
 #define UI_MANAGER_H_
-
-/** @brief A data structure containing a user's UI selection */
-struct Selection {
-	int Row = 0;
-	int Col = 0;
-};
 
 /** @brief An interface for user input handling */
 class Input {
@@ -42,9 +37,10 @@ public:
 		Left,
 		Right,
 		Up,
-		Down
+		Down,
+		Select
 	};
-private:
+protected:
 	void ChangeSelection(Key K) {
 		switch (K) {
 		case Key::Left: {
@@ -65,12 +61,40 @@ private:
 		}
 		}
 	}
-public:
 	Selection Cursor;
 	int NRows = 0;
 	int NCols = 0;
+	void set_nrows(int nrow) {NRows = nrow;}
+	void set_ncols(int ncol) {NCols = ncol;}
+public:
 	virtual int GetKey() = 0;
 	virtual int ProcessKey(int Keyval) = 0;
+};
+
+class NCurses_Input : public Input {
+public:
+	NCurses_Input(int tNRows, int tNCols) {
+		set_nrows(tNRows);
+		set_ncols(tNCols);
+	}
+	
+	virtual int GetKey() override {
+		return getch();
+	}
+	virtual int ProcessKey(int KeyVal) {
+		switch (KeyVal) {
+		case KEY_LEFT:  ChangeSelection(Key::Left); break;
+		case KEY_RIGHT: ChangeSelection(Key::Right); break;
+		case KEY_DOWN:  ChangeSelection(Key::Down); break;
+		case KEY_UP:    ChangeSelection(Key::Up); break;
+		//case '+':       IncrementValue(); break; //TODO
+		//case '-':       DecrementValue(); break; //TODO
+		case KEY_ENTER: [[fallthrough]]
+		//case '\n':      GetInput(); break; //TODO
+		default: return KeyVal;
+		}
+		return KeyVal;
+	}
 };
 
 /****************************************************************

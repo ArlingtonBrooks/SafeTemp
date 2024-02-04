@@ -51,6 +51,7 @@ PLANNED UPDATES:
 #include <string>
 #include <vector>
 #include <cmath>
+#include <memory>
 #include <stdexcept>
 //#include <config.h>
 #include <sensors/sensors.h> //lm_sensors-devel
@@ -132,24 +133,71 @@ bool ReadConfig(UserInterface*, unsigned int, InputArguments &InArgs);
 bool WriteConfig(UserInterface*, InputArguments &InArgs);
 void SetHomeDirectory(InputArguments &InArgs);
 
-void RunNCurses(InputArguments &InArgs) {
-	MainWindow Main;
-	//Input InputHandler;
-	//Create UI and graph windows;
-	Main.CreateSubWindow("Graph",10,10,5,5);
-	Main.RefreshAll();
-	int i = getch();
-	while (i != 'q') {
-		i = getch();
+/** @brief Set size of graph window */
+Rect<int> GetGraphSize(WinSize const &MainWindowSize)
+{
+	Rect<int> GraphSize;
+	GraphSize.x = 0;
+	GraphSize.y = 0;
+	GraphSize.w = MainWindowSize.x;
+	GraphSize.h = MainWindowSize.y-12;
+	return GraphSize;
+}
+
+/** @brief Set size of UI window */
+Rect<int> GetUiSize(WinSize const &MainWindowSize)
+{
+	Rect<int> UiSize;
+	UiSize.x = 0;
+	UiSize.y = MainWindowSize.y-12;
+	UiSize.w = MainWindowSize.x;
+	UiSize.h = 12;
+	return UiSize;
+}
+
+void NCurses_Draw(MainWindow &Main, bool Resize) {
+	WinSize MainWindowSize = Main.GetSize();
+	if (Resize) {
+		Main.GetSubWindow("Graph").Resize(GetGraphSize(MainWindowSize));
+		Main.GetSubWindow("UI").Resize(GetUiSize(MainWindowSize));
+		if (MainWindowSize.y >= 30) Main.RedrawAll();
+	}
+	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),{0,0});
+	Main.Draw();
+	if (MainWindowSize.y < 30) {
+		Main.PrintString(MainWindowSize.y/2,MainWindowSize.x/2-10,"Window size too small");
+		Main.Refresh();
+	} else {
+		mvwprintw(Main.GetSubWindow("Graph").GetHandle().get(),0,0,"  Plot of Temperature VS Time  ");
 		Main.RefreshAll();
+	}
+}
+
+static unsigned GetTotalNumberOfSensors(std::vector<std::shared_ptr<temperature_sensor_set>> const &Sensors) {
+	unsigned ret = 0;
+	for (auto const &i : Sensors) {
+		ret += i.get()->GetNumberOfSensors();
+	}
+	return ret;
+}
+
+void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_sensor_set>> &Sensors) {
+	MainWindow Main;
+	unsigned TotalNSensors = GetTotalNumberOfSensors(Sensors);
+	NCurses_Input InputHandler(TotalNSensors,3);
+	//Create UI and graph windows;
+	Main.CreateSubWindow("Graph",GetGraphSize(Main.GetSize()));
+	Main.CreateSubWindow("UI",GetUiSize(Main.GetSize()));
+	Main.RefreshAll();
+	int i = 0;
+	while (i != 'q') { //step
+		i = InputHandler.GetKey();
+		NCurses_Draw(Main,i == KEY_RESIZE);
 	}
 }
 
 int main(int argc,char** argv)
 {
-//	InputArguments A1;
-//		RunNCurses(A1);
-	return 0;
 	/* Check for the presence of libsensors package */
 	if (HAVE_LIBSENSORS != 1) 
 	{
@@ -171,11 +219,14 @@ int main(int argc,char** argv)
 		return -4;
 	}
 
+	std::vector<std::shared_ptr<temperature_sensor_set>> AllSensors;
+	AllSensors.emplace_back(std::make_shared<lm_sensor>(nullptr));
 	if (InArgs.UseUI) {
-		RunNCurses(InArgs);
+		RunNCurses(InArgs,AllSensors);
 		return 0;
 	}
 
+	return -5; //Temporary; don't go beyond this.
 	/* Statistics variables */
 	vector<vector<time_t>> X_pts;
 	vector<vector<double>> Y_pts;

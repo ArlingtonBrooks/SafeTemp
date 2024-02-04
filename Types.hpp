@@ -4,6 +4,12 @@
 #include <cmath>
 #include <type_traits>
 
+/** @brief A data structure containing a user's UI selection */
+struct Selection {
+	int Row = 0;
+	int Col = 0;
+};
+
 template <typename DataType>
 struct Point
 {

@@ -59,20 +59,26 @@ public:
 	std::shared_ptr<WINDOW> GetHandle() {return m_Win;}
 	WinSize GetSize() {
 		WinSize Size;
-		getmaxyx(m_Win.get(),Size.x,Size.y);
+		getmaxyx(m_Win.get(),Size.y,Size.x);
 		return Size;
 	}
-	void Redraw() {
+	virtual void Redraw() {
 		touchwin(m_Win.get());
 		Refresh();
 	}
 	virtual void Refresh() {
 		wrefresh(m_Win.get());
 	}
+	virtual void Draw() = 0;
+	void PrintString(int y, int x, std::string const &Message, bool box = false) {
+		mvwprintw(m_Win.get(),y,x,Message.c_str());
+	}
 };
 
 /**
  * @brief A subwindow to be contained within a MainWindow class
+ * @note The user interface will be structured as:
+ * <current temp> | <sensor name> | <critical temperature> | <Command>|
  */
 class SubWindow : public ncursesWindow {
 protected:
@@ -82,12 +88,26 @@ public:
 		set_handle(std::shared_ptr<WINDOW>(newwin(h,w,y,x),[](WINDOW* win){wclear(win); delwin(win);}));
 		box(m_Win.get(), 0, 0);
 	}
+	SubWindow(Rect<int> Size) {
+		set_handle(std::shared_ptr<WINDOW>(newwin(Size.h,Size.w,Size.y,Size.x),[](WINDOW* win){wclear(win); delwin(win);}));
+		box(m_Win.get(), 0, 0);
+	}
 	void Resize(Rect<int> NewSize) {
 		wresize(m_Win.get(),NewSize.h, NewSize.w);
-		wmove(m_Win.get(),NewSize.y,NewSize.x);
+		mvwin(m_Win.get(),NewSize.y,NewSize.x);
 		Refresh();
 	}
+	virtual void Draw() override {
+		box(m_Win.get(), 0, 0);
+	}
 };
+
+void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor){//, std::vector<SensorDetailLine> const &Opts) {
+	wmove(Win.GetHandle().get(),0,0);
+	for (unsigned i = 0; i != 5; i++) {//auto const &i : Opts) {
+		wprintw(Win.GetHandle().get(),"AAA\n"); //temporary
+	}
+}
 
 /**
  * @brief The global main window
@@ -95,7 +115,7 @@ public:
 class MainWindow : public ncursesWindow {
 protected:
 public:
-	std::vector<SubWindow> Windows;
+	std::unordered_map<std::string,SubWindow> Windows;
 	MainWindow() {
 		//Set window handle; delete is handled by destructor;
 		set_handle(std::shared_ptr<WINDOW>(initscr(),[](WINDOW* win){endwin();}));
@@ -107,16 +127,33 @@ public:
 	~MainWindow() {
 		Windows.clear();
 	}
-	void CreateSubWindow(std::string WName, int h, int w, int y, int x) {
-		Windows.emplace_back(h,w,y,x);
+	void CreateSubWindow(std::string const &WName, int h, int w, int y, int x) {
+		SubWindow WSub(h,w,y,x);
+		Windows.emplace(WName,WSub);
+	}
+	void CreateSubWindow(std::string const &WName, Rect<int> Size) {
+		SubWindow WSub(Size);
+		Windows.emplace(WName,WSub);
+	}
+	virtual void Draw() override {
+		for (auto &i : Windows) i.second.Draw();
 	}
 	virtual void Refresh() override {
 		wrefresh(m_Win.get());
 		refresh();
 	}
+	SubWindow &GetSubWindow(std::string const &WName) {
+		return Windows.at(WName);
+	}
 	void RefreshAll() {
 		Refresh();
-		for (auto &i : Windows) i.Refresh();
+		for (auto &i : Windows) i.second.Refresh();
+	}
+	void RedrawAll() {
+		wclear(m_Win.get());
+		for (auto &i : Windows) wclear(i.second.GetHandle().get());
+		Redraw();
+		for (auto &i : Windows) i.second.Redraw();
 	}
 };
 #endif //WINMAN_H_
