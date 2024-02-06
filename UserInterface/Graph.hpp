@@ -37,7 +37,7 @@ Graph Class
  */
 template <typename DataType = float>
 struct GraphData {
-	std::vector<Point<DataType>> Points;
+	std::vector<SensorDetailLine> Points;
 	std::string Name;
 	int Colour = 0;
 	char Symbol = 0;

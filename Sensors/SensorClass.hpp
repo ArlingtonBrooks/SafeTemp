@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <ctime>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -13,18 +14,6 @@ struct SensorPair {
 	sensors_chip_name const *Chip;
 	sensors_feature const *Feature;
 	sensors_subfeature const *SubFeature;
-};
-
-struct TempPair {
-	std::string Name;
-	float Temp;
-};
-
-struct SensorDetailLine {
-	std::string FriendlyName;
-	TempPair TempData;
-	float CritTemp;
-	std::string Command;
 };
 
 class temperature_sensor_set {

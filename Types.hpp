@@ -2,8 +2,22 @@
 #define SAFETEMP_TYPES_HPP
 
 #include <cmath>
+#include <ctime>
+#include <string>
 #include <type_traits>
 
+struct TempPair {
+	std::string Name;
+	float Temp;
+};
+
+struct SensorDetailLine {
+	time_t Time;
+	std::string FriendlyName;
+	std::string Command;
+	TempPair TempData;
+	float CritTemp;
+};
 /** @brief A data structure containing a user's UI selection */
 struct Selection {
 	int Row = 0;

@@ -102,10 +102,43 @@ public:
 	}
 };
 
-void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor){//, std::vector<SensorDetailLine> const &Opts) {
-	wmove(Win.GetHandle().get(),0,0);
-	for (unsigned i = 0; i != 5; i++) {//auto const &i : Opts) {
-		wprintw(Win.GetHandle().get(),"AAA\n"); //temporary
+void PrintHeaders(SubWindow &Win) {
+	const char* CurrentTemp = "Curr. T";
+	const char* CriticalTemp = "Crit. T";
+	const char* SName = "Sensor Name";
+	const char* Cmd = "Command";
+	mvwprintw(Win.GetHandle().get(),1,1,"%-8s | ",CurrentTemp);
+	wprintw(Win.GetHandle().get(),"%-16s  | ",SName);
+	wprintw(Win.GetHandle().get(),"%-8s | ",CriticalTemp);
+	wprintw(Win.GetHandle().get(),Cmd);
+}
+
+void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t ScrollPoint, std::vector<SensorDetailLine> const &Opts) {
+	wmove(Win.GetHandle().get(),1,1);
+	unsigned nSensors = Opts.size();
+	WinSize WSize = Win.GetSize();
+	ScrollPoint = std::min(ScrollPoint,Opts.size()-WSize.y - 5);
+	PrintHeaders(Win);
+	for (int i = 0; i != WSize.y - 5; i++) {//auto const &i : Opts) 
+		unsigned SensorNumber = i + ScrollPoint;
+		mvwprintw(Win.GetHandle().get(), i+3, 1, "%8.2f | ",Opts[SensorNumber].TempData.Temp);
+		wprintw(Win.GetHandle().get(),"%-16s  | ",Opts[SensorNumber].FriendlyName.substr(0,16).c_str());
+		wprintw(Win.GetHandle().get(),"%8.2f | ",Opts[SensorNumber].CritTemp);
+		wprintw(Win.GetHandle().get(),"%s",Opts[SensorNumber].Command.substr(0,WSize.x - 40).c_str());
+		if (40 + Opts[SensorNumber].Command.length() > WSize.x - 8)
+			wprintw(Win.GetHandle().get(),"...");
+	}
+	if (Opts.size() > WSize.y - 5) {
+		mvwprintw(Win.GetHandle().get(), WSize.y-2, 1, "%-8s | ","(...)");
+		wprintw(Win.GetHandle().get(), "%-16s  | ","  (...)  ");
+		wprintw(Win.GetHandle().get(), "%-8s | "," (...) ");
+		wprintw(Win.GetHandle().get(), "%s "," (...) ");
+	}
+	if (ScrollPoint > 0) {
+		mvwprintw(Win.GetHandle().get(), 2, 1, "%-8s | ","(...)");
+		wprintw(Win.GetHandle().get(), "%-16s  | ","  (...)  ");
+		wprintw(Win.GetHandle().get(), "%-8s | "," (...) ");
+		wprintw(Win.GetHandle().get(), "%s "," (...) ");
 	}
 }
 
@@ -122,7 +155,7 @@ public:
 		cbreak();
 		noecho();
 		curs_set(0);
-		timeout(8);
+		timeout(128);
 	}
 	~MainWindow() {
 		Windows.clear();

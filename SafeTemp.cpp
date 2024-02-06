@@ -154,6 +154,17 @@ Rect<int> GetUiSize(WinSize const &MainWindowSize)
 	UiSize.h = 12;
 	return UiSize;
 }
+#include <ctime>
+std::vector<SensorDetailLine> TestLines { {0,"MySensorName","/usr/opt/some/crazy/command --with-some options --and stuff.txt", {"0:001:a:21",21.5}, 60.0 },
+	                                  {0,"MoSensoyName","/opt/some/crazy/command --with-some options --and stuff.txt", {"0:004:b:31",31.5}, 60.0 },
+	                                  {0,"MoSeName","/opt/command --with-some options --and stuff.txt", {"0:004:b:31",31.5}, 60.0 },
+	                                  {0,"MoSe","", {"6:004:b:3a",31.5}, 60.0 },
+	                                  {0,"Sensor","", {"5:0b4:b:b1",31.5}, 60.0 },
+	                                  {0,"Mo333Name","", {"0:104:b:32",31.5}, 60.0 },
+	                                  {0,"Mo6324347me","/usr/alarm.bin", {"0:014:b:31",31.5}, 60.0 },
+	                                  {0,"MoSensor123","/var/log/alarm.bin", {"0:124:b:31",41.5}, 60.0 },
+	                                  {0,"Name","/opt/some/crazy/command stuff.txt", {"4:004:b:21",61.5}, 60.0 },
+	                                  {0,"Name55525","/opt/some/crazy/command", {"2:004:b:51",41.5}, 60.0 } };
 
 void NCurses_Draw(MainWindow &Main, bool Resize) {
 	WinSize MainWindowSize = Main.GetSize();
@@ -162,9 +173,9 @@ void NCurses_Draw(MainWindow &Main, bool Resize) {
 		Main.GetSubWindow("UI").Resize(GetUiSize(MainWindowSize));
 		if (MainWindowSize.y >= 30) Main.RedrawAll();
 	}
-	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),{0,0});
+	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),{0,0},0,TestLines);
 	Main.Draw();
-	if (MainWindowSize.y < 30) {
+	if (MainWindowSize.y < 30 || MainWindowSize.x < 50) {
 		Main.PrintString(MainWindowSize.y/2,MainWindowSize.x/2-10,"Window size too small");
 		Main.Refresh();
 	} else {
