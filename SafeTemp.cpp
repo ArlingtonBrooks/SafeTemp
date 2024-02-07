@@ -51,6 +51,7 @@ PLANNED UPDATES:
 #include <string>
 #include <vector>
 #include <cmath>
+#include <ctime>
 #include <memory>
 #include <stdexcept>
 //#include <config.h>
@@ -154,7 +155,8 @@ Rect<int> GetUiSize(WinSize const &MainWindowSize)
 	UiSize.h = 12;
 	return UiSize;
 }
-#include <ctime>
+
+#if UI_TEST
 std::vector<SensorDetailLine> TestLines { {0,"MySensorName","/usr/opt/some/crazy/command --with-some options --and stuff.txt", {"0:001:a:21",21.5}, 60.0 },
 	                                  {0,"MoSensoyName","/opt/some/crazy/command --with-some options --and stuff.txt", {"0:004:b:31",31.5}, 60.0 },
 	                                  {0,"MoSeName","/opt/command --with-some options --and stuff.txt", {"0:004:b:31",31.5}, 60.0 },
@@ -165,6 +167,7 @@ std::vector<SensorDetailLine> TestLines { {0,"MySensorName","/usr/opt/some/crazy
 	                                  {0,"MoSensor123","/var/log/alarm.bin", {"0:124:b:31",41.5}, 60.0 },
 	                                  {0,"Name","/opt/some/crazy/command stuff.txt", {"4:004:b:21",61.5}, 60.0 },
 	                                  {0,"Name55525","/opt/some/crazy/command", {"2:004:b:51",41.5}, 60.0 } };
+#endif
 
 void NCurses_Draw(MainWindow &Main, bool Resize) {
 	WinSize MainWindowSize = Main.GetSize();
@@ -173,7 +176,9 @@ void NCurses_Draw(MainWindow &Main, bool Resize) {
 		Main.GetSubWindow("UI").Resize(GetUiSize(MainWindowSize));
 		if (MainWindowSize.y >= 30) Main.RedrawAll();
 	}
+#if UI_TEST
 	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),{0,0},0,TestLines);
+#endif
 	Main.Draw();
 	if (MainWindowSize.y < 30 || MainWindowSize.x < 50) {
 		Main.PrintString(MainWindowSize.y/2,MainWindowSize.x/2-10,"Window size too small");
@@ -184,7 +189,7 @@ void NCurses_Draw(MainWindow &Main, bool Resize) {
 	}
 }
 
-static unsigned GetTotalNumberOfSensors(std::vector<std::shared_ptr<temperature_sensor_set>> const &Sensors) {
+static unsigned GetTotalNumberOfSensors(std::vector<std::shared_ptr<temperature_sensor_set>> const Sensors) {
 	unsigned ret = 0;
 	for (auto const &i : Sensors) {
 		ret += i.get()->GetNumberOfSensors();

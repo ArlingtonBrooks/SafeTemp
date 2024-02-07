@@ -18,6 +18,40 @@ struct SensorDetailLine {
 	TempPair TempData;
 	float CritTemp;
 };
+
+class SensorPreferences {
+private:
+	std::string m_SensorName = "";
+	std::string m_FriendlyName = "";
+	std::string m_Command;
+	float m_CriticalTemp;
+public:
+	SensorPreferences(std::string const &RawName) {
+		m_SensorName = RawName;
+		m_FriendlyName = m_SensorName;
+		m_Command = "";
+		m_CriticalTemp = -273.15;
+	}
+	void SetFriendlyName(std::string const &NewName) {
+		m_FriendlyName = NewName;
+	}
+	std::string GetFriendlyName() const {
+		return m_FriendlyName;
+	}
+	void SetCommand(std::string const &Cmd) {
+		m_Command = cmd;
+	}
+	std::string GetCommand() const {
+		return m_Command;
+	}
+	void SetCriticalTemp(float Temp) {
+		m_CriticalTemp = Temp;
+	}
+	float GetCriticalTemp() const {
+		return m_CriticalTemp;
+	}
+};
+
 /** @brief A data structure containing a user's UI selection */
 struct Selection {
 	int Row = 0;

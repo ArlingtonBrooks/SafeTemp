@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "../Types.hpp"
+
 /** @brief A data structure for an lm_sensors sensor */
 struct SensorPair {
 	std::string Name;
@@ -23,6 +25,23 @@ public:
 	virtual float GetTemperature(unsigned index) = 0;
 	virtual unsigned GetNumberOfSensors() const = 0;
 	virtual ~temperature_sensor_set() = default;
+};
+
+class test_sensor : public temperature_sensor_set {
+public:
+	test_sensor(unsigned num) {
+        for (unsigned j = 0; j != 20; j++) {
+	        for (unsigned i = 0; i != 12; i++) {
+	                unsigned idx = (sizeof(CharSet)) % (i % (j+1) + 1);
+	                idx += i % (j+1);
+	                idx += (i + j + 1) % sizeof(CharSet);
+	                idx = (idx >= sizeof(CharSet)) ? sizeof(CharSet)-1 : idx;
+	                std::cout << CharSet[sizeof(CharSet) - idx];
+	        }
+	        std::cout << "\n";
+        }
+
+	}
 };
 
 //TODO: put nvidia sensors here;
@@ -53,6 +72,8 @@ public:
 					SensorPair SP;
 					subfeat = sensors_get_subfeature(Chip,feat,SENSORS_SUBFEATURE_TEMP_INPUT);
 					SP.Name = std::string(sensors_get_label(Chip,feat));
+					//Prevent overwriting chip names by adding chip and feature numbers
+					SP.Name += std::string(" ") + std::to_string(ChipNo) + std::string(":") + std::to_string(FeatNo);
 					SP.Chip = Chip;
 					SP.Feature = feat;
 					SP.SubFeature = subfeat;
@@ -108,5 +129,17 @@ public:
 		return ret;
 	}
 };
+
+SensorDetailLine GetSensorDetails()
+{
+
+}
+
+std::vector<SensorDetailLine> GetAllSensorDetails(std::vector<std::shared_ptr<temperature_sensor_set>> const Sensors, std::unordered_map<std::string,) {
+	std::vector<SensorDetailLine> ret;
+	for (auto const &i : Sensors) {
+		std::vector<TempPair> TP = AllSensors.back()->GetAllTemperatures();
+	}
+}
 
 #endif //SENSORCLASS_HPP_
