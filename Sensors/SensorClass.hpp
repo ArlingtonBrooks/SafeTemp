@@ -166,6 +166,8 @@ SensorDetailLine CreateEmptySensorData(std::string const &Name) {
 	ret.FriendlyName = Name;
 	ret.Command = "";
 	ret.CritTemp = -273.15;
+	ret.Symbol = '*';
+	ret.Colour = 0;
 	return ret;
 }
 

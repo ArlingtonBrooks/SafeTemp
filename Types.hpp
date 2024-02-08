@@ -17,6 +17,8 @@ struct SensorDetailLine {
 	std::string Command;
 	TempPair TempData;
 	float CritTemp;
+	char Symbol;
+	unsigned char Colour;
 };
 
 class SensorPreferences {

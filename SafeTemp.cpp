@@ -142,7 +142,7 @@ Rect<int> GetGraphSize(WinSize const &MainWindowSize)
 	GraphSize.x = 0;
 	GraphSize.y = 0;
 	GraphSize.w = MainWindowSize.x;
-	GraphSize.h = MainWindowSize.y-12;
+	GraphSize.h = MainWindowSize.y-10;
 	return GraphSize;
 }
 
@@ -151,9 +151,9 @@ Rect<int> GetUiSize(WinSize const &MainWindowSize)
 {
 	Rect<int> UiSize;
 	UiSize.x = 0;
-	UiSize.y = MainWindowSize.y-12;
+	UiSize.y = MainWindowSize.y- 10;
 	UiSize.w = MainWindowSize.x;
-	UiSize.h = 12;
+	UiSize.h = 10;
 	return UiSize;
 }
 
@@ -162,13 +162,14 @@ void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorD
 	if (Resize) {
 		Main.GetSubWindow("Graph").Resize(GetGraphSize(MainWindowSize));
 		Main.GetSubWindow("UI").Resize(GetUiSize(MainWindowSize));
-		if (MainWindowSize.y >= 30) Main.RedrawAll();
+		if (MainWindowSize.y >= 24) Main.RedrawAll();
 	}
 #if UI_TEST
+	NCursesPrintGraphAxes(Main.GetSubWindow("Graph"));
 	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),{0,0},0,SensorDetails);
 #endif
 	Main.Draw();
-	if (MainWindowSize.y < 30 || MainWindowSize.x < 50) {
+	if (MainWindowSize.y < 24 || MainWindowSize.x < 50) {
 		Main.PrintString(MainWindowSize.y/2,MainWindowSize.x/2-10,"Window size too small");
 		Main.Refresh();
 	} else {

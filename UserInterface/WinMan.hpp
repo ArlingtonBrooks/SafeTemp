@@ -106,10 +106,14 @@ void PrintHeaders(SubWindow &Win) {
 	const char* CurrentTemp = "Curr. T";
 	const char* CriticalTemp = "Crit. T";
 	const char* SName = "Sensor Name";
+	const char* SymbolTxt = "Symbol";
+	const char* ColTxt = "Colour";
 	const char* Cmd = "Command";
 	mvwprintw(Win.GetHandle().get(),1,1,"%-8s | ",CurrentTemp);
 	wprintw(Win.GetHandle().get(),"%-16s  | ",SName);
 	wprintw(Win.GetHandle().get(),"%-8s | ",CriticalTemp);
+	wprintw(Win.GetHandle().get(),"%-6s | ",SymbolTxt);
+	wprintw(Win.GetHandle().get(),"%-6s | ",ColTxt);
 	wprintw(Win.GetHandle().get(),Cmd);
 }
 
@@ -126,22 +130,48 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
 		mvwprintw(Win.GetHandle().get(), i+3, 1, "%8.2f | ",Opts[SensorNumber].TempData.Temp);
 		wprintw(Win.GetHandle().get(),"%-16s  | ",Opts[SensorNumber].FriendlyName.substr(0,16).c_str());
 		wprintw(Win.GetHandle().get(),"%8.2f | ",Opts[SensorNumber].CritTemp);
-		wprintw(Win.GetHandle().get(),"%s",Opts[SensorNumber].Command.substr(0,WSize.x - 40).c_str());
-		if (40 + Opts[SensorNumber].Command.length() > WSize.x - 8)
+		wprintw(Win.GetHandle().get(),"%6c | ",Opts[SensorNumber].Symbol);
+		wprintw(Win.GetHandle().get(),"%6d | ",(int)Opts[SensorNumber].Colour);
+		wprintw(Win.GetHandle().get(),"%s",Opts[SensorNumber].Command.substr(0,WSize.x - 60).c_str());
+		if (60 + Opts[SensorNumber].Command.length() > WSize.x - 8)
 			wprintw(Win.GetHandle().get(),"...");
 	}
 	if (Opts.size() > MinSensors) {
 		mvwprintw(Win.GetHandle().get(), WSize.y-2, 1, "%-8s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%-16s  | ","  (...)  ");
 		wprintw(Win.GetHandle().get(), "%-8s | "," (...) ");
+		wprintw(Win.GetHandle().get(), "%-6s | ","(...)");
+		wprintw(Win.GetHandle().get(), "%-6s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%s "," (...) ");
 	}
 	if (ScrollPoint > 0) {
 		mvwprintw(Win.GetHandle().get(), 2, 1, "%-8s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%-16s  | ","  (...)  ");
 		wprintw(Win.GetHandle().get(), "%-8s | "," (...) ");
+		wprintw(Win.GetHandle().get(), "%-6s | ","(...)");
+		wprintw(Win.GetHandle().get(), "%-6s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%s "," (...) ");
 	}
+}
+
+void NCursesPrintGraphAxes(SubWindow &Win/*, float MaxTemp, float MinTemp, std::time_t MaxTime, std::time_t MinTime*/) {
+	WinSize WSize = Win.GetSize();
+	const char TempText[] = "Temperature";
+	const char TimeText[] = "Time";
+	int loc_y = WSize.y / 2 - sizeof(TempText) / 2;
+	int loc_x = WSize.x / 2 - sizeof(TimeText) / 2;
+	for (auto const &c : TempText) {
+		mvwprintw(Win.GetHandle().get(),loc_y++,2,"%c",c);
+	}
+	mvwprintw(Win.GetHandle().get(),WSize.y-2,loc_x,"%s",TimeText);
+	wmove(Win.GetHandle().get(),WSize.y-4,6);
+	whline(Win.GetHandle().get(),0,WSize.x - 8);
+	wmove(Win.GetHandle().get(),2,12);
+	wvline(Win.GetHandle().get(),0,WSize.y-4);
+}
+
+void NCursesPrintGraphToWindow(SubWindow &Win, std::vector<SensorDetailLine> const &Opts, unsigned dtime = 0) {
+	//todo
 }
 
 /**
