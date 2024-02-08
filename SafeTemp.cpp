@@ -54,6 +54,7 @@ PLANNED UPDATES:
 #include <ctime>
 #include <memory>
 #include <stdexcept>
+#include <unordered_map>
 //#include <config.h>
 #include <sensors/sensors.h> //lm_sensors-devel
 #include <sensors/error.h>   //lm_sensors-devel
@@ -156,20 +157,7 @@ Rect<int> GetUiSize(WinSize const &MainWindowSize)
 	return UiSize;
 }
 
-#if UI_TEST
-std::vector<SensorDetailLine> TestLines { {0,"MySensorName","/usr/opt/some/crazy/command --with-some options --and stuff.txt", {"0:001:a:21",21.5}, 60.0 },
-	                                  {0,"MoSensoyName","/opt/some/crazy/command --with-some options --and stuff.txt", {"0:004:b:31",31.5}, 60.0 },
-	                                  {0,"MoSeName","/opt/command --with-some options --and stuff.txt", {"0:004:b:31",31.5}, 60.0 },
-	                                  {0,"MoSe","", {"6:004:b:3a",31.5}, 60.0 },
-	                                  {0,"Sensor","", {"5:0b4:b:b1",31.5}, 60.0 },
-	                                  {0,"Mo333Name","", {"0:104:b:32",31.5}, 60.0 },
-	                                  {0,"Mo6324347me","/usr/alarm.bin", {"0:014:b:31",31.5}, 60.0 },
-	                                  {0,"MoSensor123","/var/log/alarm.bin", {"0:124:b:31",41.5}, 60.0 },
-	                                  {0,"Name","/opt/some/crazy/command stuff.txt", {"4:004:b:21",61.5}, 60.0 },
-	                                  {0,"Name55525","/opt/some/crazy/command", {"2:004:b:51",41.5}, 60.0 } };
-#endif
-
-void NCurses_Draw(MainWindow &Main, bool Resize) {
+void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorDetails, bool Resize) {
 	WinSize MainWindowSize = Main.GetSize();
 	if (Resize) {
 		Main.GetSubWindow("Graph").Resize(GetGraphSize(MainWindowSize));
@@ -177,7 +165,7 @@ void NCurses_Draw(MainWindow &Main, bool Resize) {
 		if (MainWindowSize.y >= 30) Main.RedrawAll();
 	}
 #if UI_TEST
-	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),{0,0},0,TestLines);
+	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),{0,0},0,SensorDetails);
 #endif
 	Main.Draw();
 	if (MainWindowSize.y < 30 || MainWindowSize.x < 50) {
@@ -197,7 +185,7 @@ static unsigned GetTotalNumberOfSensors(std::vector<std::shared_ptr<temperature_
 	return ret;
 }
 
-void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_sensor_set>> &Sensors) {
+void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_sensor_set>> &Sensors, std::unordered_map<std::string,SensorDetailLine> const &NameMap) {
 	MainWindow Main;
 	unsigned TotalNSensors = GetTotalNumberOfSensors(Sensors);
 	NCurses_Input InputHandler(TotalNSensors,3);
@@ -208,7 +196,9 @@ void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_
 	int i = 0;
 	while (i != 'q') { //step
 		i = InputHandler.GetKey();
-		NCurses_Draw(Main,i == KEY_RESIZE);
+		std::vector<SensorDetailLine> StepDetails = GetAllSensorDetails(Sensors,NameMap);
+
+		NCurses_Draw(Main,StepDetails,i == KEY_RESIZE);
 	}
 }
 
@@ -236,9 +226,14 @@ int main(int argc,char** argv)
 	}
 
 	std::vector<std::shared_ptr<temperature_sensor_set>> AllSensors;
+#if UI_TEST
+	AllSensors.emplace_back(std::make_shared<test_sensor>(15));
+#else
 	AllSensors.emplace_back(std::make_shared<lm_sensor>(nullptr));
+#endif
+	std::unordered_map<std::string,SensorDetailLine> BasicSensorMap;
 	if (InArgs.UseUI) {
-		RunNCurses(InArgs,AllSensors);
+		RunNCurses(InArgs,AllSensors,BasicSensorMap);
 		return 0;
 	}
 

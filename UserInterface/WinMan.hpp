@@ -119,7 +119,9 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
 	WinSize WSize = Win.GetSize();
 	ScrollPoint = std::min(ScrollPoint,Opts.size()-WSize.y - 5);
 	PrintHeaders(Win);
-	for (int i = 0; i != WSize.y - 5; i++) {//auto const &i : Opts) 
+	unsigned MinSensors = WSize.y - 5;
+	MinSensors = (MinSensors > Opts.size()) ? Opts.size() : MinSensors;
+	for (int i = 0; i != MinSensors; i++) {//auto const &i : Opts) 
 		unsigned SensorNumber = i + ScrollPoint;
 		mvwprintw(Win.GetHandle().get(), i+3, 1, "%8.2f | ",Opts[SensorNumber].TempData.Temp);
 		wprintw(Win.GetHandle().get(),"%-16s  | ",Opts[SensorNumber].FriendlyName.substr(0,16).c_str());
@@ -128,7 +130,7 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
 		if (40 + Opts[SensorNumber].Command.length() > WSize.x - 8)
 			wprintw(Win.GetHandle().get(),"...");
 	}
-	if (Opts.size() > WSize.y - 5) {
+	if (Opts.size() > MinSensors) {
 		mvwprintw(Win.GetHandle().get(), WSize.y-2, 1, "%-8s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%-16s  | ","  (...)  ");
 		wprintw(Win.GetHandle().get(), "%-8s | "," (...) ");

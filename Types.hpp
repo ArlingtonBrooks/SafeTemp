@@ -39,7 +39,7 @@ public:
 		return m_FriendlyName;
 	}
 	void SetCommand(std::string const &Cmd) {
-		m_Command = cmd;
+		m_Command = Cmd;
 	}
 	std::string GetCommand() const {
 		return m_Command;

@@ -7,16 +7,9 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "../Types.hpp"
-
-/** @brief A data structure for an lm_sensors sensor */
-struct SensorPair {
-	std::string Name;
-	sensors_chip_name const *Chip;
-	sensors_feature const *Feature;
-	sensors_subfeature const *SubFeature;
-};
 
 class temperature_sensor_set {
 public:
@@ -28,19 +21,49 @@ public:
 };
 
 class test_sensor : public temperature_sensor_set {
+private:
+	char const CharSet[96] = "`1234567890-=~!@#$%^&*()_+qwertyuiop[]\\asdfghjkl;'zxcvbnm,./ QWERTYUIOP{}|ASDFGHJKL:\"ZXCVBNM<>?";
+	std::vector<std::string> SensorNames;
 public:
 	test_sensor(unsigned num) {
-        for (unsigned j = 0; j != 20; j++) {
-	        for (unsigned i = 0; i != 12; i++) {
-	                unsigned idx = (sizeof(CharSet)) % (i % (j+1) + 1);
-	                idx += i % (j+1);
-	                idx += (i + j + 1) % sizeof(CharSet);
-	                idx = (idx >= sizeof(CharSet)) ? sizeof(CharSet)-1 : idx;
-	                std::cout << CharSet[sizeof(CharSet) - idx];
-	        }
-	        std::cout << "\n";
-        }
-
+		const unsigned NCharSet = sizeof(CharSet) - 1;
+        	for (unsigned j = 0; j != 20; j++) {
+			std::string SensorName = "";
+		        for (unsigned i = 0; i != 12; i++) { //Generate random sensor names
+		                unsigned idx = NCharSet % (i % (j+1) + 1);
+		                idx += i % (j+1);
+		                idx += (i + j + 1) % NCharSet;
+		                idx = (idx >= NCharSet) ? NCharSet-1 : idx;
+				SensorName += CharSet[NCharSet - idx];
+		        }
+			SensorNames.push_back(SensorName);
+        	}
+	}
+	virtual std::vector<TempPair> GetAllTemperatures() override {
+		std::vector<TempPair> ret;
+		for (auto const &i : SensorNames) {
+			TempPair TP;
+			TP.Name = i;
+			TP.Temp = 20.0;
+			for (auto const &j : i) {
+				TP.Temp += (double)j / 100.0;
+			}
+			ret.push_back(TP);
+		}
+		return ret;
+	}
+	virtual float GetTemperature(std::string const &SensorName) override {
+		float ret = 20.0;
+		for (auto const &j : SensorName) {
+			ret += (double)j / 100.0;
+		}
+		return ret;
+	}
+	virtual float GetTemperature(unsigned index) override {
+		return 20.0 + (double)index;
+	}
+	virtual unsigned GetNumberOfSensors() const override {
+		return SensorNames.size();
 	}
 };
 
@@ -49,7 +72,14 @@ public:
 /** @brief A holder class for lm_sensors temperature chips */
 class lm_sensor : public temperature_sensor_set {
 private:
-	std::vector<SensorPair> Chips;                      ///<lm_sensors chip names
+	/** @brief A data structure for an lm_sensors sensor */
+	struct lm_SensorPair {
+		std::string Name;
+		sensors_chip_name const *Chip;
+		sensors_feature const *Feature;
+		sensors_subfeature const *SubFeature;
+	};
+	std::vector<lm_SensorPair> Chips;                      ///<lm_sensors chip names
 public:
 	/** @brief Initialize lm_sensors using the configuration file located at 'file' */
 	lm_sensor(const char* file) {
@@ -69,7 +99,7 @@ public:
 			FeatNo = 0;
 			while ((feat = sensors_get_features(Chip,&FeatNo)) != 0) {
 				if (feat->type == SENSORS_FEATURE_TEMP) {
-					SensorPair SP;
+					lm_SensorPair SP;
 					subfeat = sensors_get_subfeature(Chip,feat,SENSORS_SUBFEATURE_TEMP_INPUT);
 					SP.Name = std::string(sensors_get_label(Chip,feat));
 					//Prevent overwriting chip names by adding chip and feature numbers
@@ -100,7 +130,7 @@ public:
 	/** @brief Get the temperature of a sensor of a given name */
 	virtual float GetTemperature(std::string const &Name) override {
 		double ret;
-		auto Eq = [&Name](SensorPair const &SP) {
+		auto Eq = [&Name](lm_SensorPair const &SP) {
 			return SP.Name == Name;
 		};
 		auto IT = std::find_if(Chips.begin(),Chips.end(),Eq);
@@ -130,16 +160,33 @@ public:
 	}
 };
 
-SensorDetailLine GetSensorDetails()
-{
-
+SensorDetailLine CreateEmptySensorData(std::string const &Name) {
+	SensorDetailLine ret;
+	ret.Time = std::time(0);
+	ret.FriendlyName = Name;
+	ret.Command = "";
+	ret.CritTemp = -273.15;
+	return ret;
 }
 
-std::vector<SensorDetailLine> GetAllSensorDetails(std::vector<std::shared_ptr<temperature_sensor_set>> const Sensors, std::unordered_map<std::string,) {
+std::vector<SensorDetailLine> GetAllSensorDetails(std::vector<std::shared_ptr<temperature_sensor_set>> const Sensors, std::unordered_map<std::string,SensorDetailLine> const &BasicSensorMap) {
 	std::vector<SensorDetailLine> ret;
 	for (auto const &i : Sensors) {
-		std::vector<TempPair> TP = AllSensors.back()->GetAllTemperatures();
+		std::vector<TempPair> TP = Sensors.back()->GetAllTemperatures();
+		for (auto const &j : TP) {
+			auto const IT = BasicSensorMap.find(j.Name);
+			if (IT == BasicSensorMap.end()) {
+				SensorDetailLine SLine = CreateEmptySensorData(j.Name);
+				SLine.TempData = j;
+				ret.push_back(SLine);
+			} else {
+				SensorDetailLine SLine = IT->second;
+				SLine.TempData = j;
+				SLine.Time = std::time(0);
+			}
+		}
 	}
+	return ret;
 }
 
 #endif //SENSORCLASS_HPP_
