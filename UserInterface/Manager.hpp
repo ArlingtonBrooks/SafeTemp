@@ -44,20 +44,24 @@ protected:
 	void ChangeSelection(Key K) {
 		switch (K) {
 		case Key::Left: {
-			if (Cursor.Col == 0) { Cursor.Col = NCols - 1; }
+			if (Cursor.Col == 0) {}
 			else { Cursor.Col -= 1; }
+			break;
 		}
 		case Key::Right: {
-			if (Cursor.Col == NCols - 1) { Cursor.Col = 0; }
+			if (Cursor.Col == NCols - 1) {}
 			else { Cursor.Col += 1; }
+			break;
 		}
 		case Key::Up: {
-			if (Cursor.Row == 0) { Cursor.Row = NRows - 1; }
+			if (Cursor.Row == 0) {}
 			else { Cursor.Row -= 1; }
+			break;
 		}
 		case Key::Down: {
-			if (Cursor.Row == NRows - 1) { Cursor.Row = 0; }
+			if (Cursor.Row == NRows - 1) {}
 			else { Cursor.Row += 1; }
+			break;
 		}
 		}
 	}
@@ -69,6 +73,7 @@ protected:
 public:
 	virtual int GetKey() = 0;
 	virtual int ProcessKey(int Keyval) = 0;
+	virtual Selection GetCursor() const {return Cursor; }
 };
 
 class NCurses_Input : public Input {

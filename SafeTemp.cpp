@@ -157,17 +157,15 @@ Rect<int> GetUiSize(WinSize const &MainWindowSize)
 	return UiSize;
 }
 
-void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorDetails, bool Resize) {
+void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorDetails, Selection Cursor, bool Resize) {
 	WinSize MainWindowSize = Main.GetSize();
 	if (Resize) {
 		Main.GetSubWindow("Graph").Resize(GetGraphSize(MainWindowSize));
 		Main.GetSubWindow("UI").Resize(GetUiSize(MainWindowSize));
 		if (MainWindowSize.y >= 24) Main.RedrawAll();
 	}
-#if UI_TEST
 	NCursesPrintGraphAxes(Main.GetSubWindow("Graph"));
-	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),{0,0},0,SensorDetails);
-#endif
+	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),Cursor,0,SensorDetails);
 	Main.Draw();
 	if (MainWindowSize.y < 24 || MainWindowSize.x < 50) {
 		Main.PrintString(MainWindowSize.y/2,MainWindowSize.x/2-10,"Window size too small");
@@ -189,7 +187,7 @@ static unsigned GetTotalNumberOfSensors(std::vector<std::shared_ptr<temperature_
 void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_sensor_set>> &Sensors, std::unordered_map<std::string,SensorDetailLine> const &NameMap) {
 	MainWindow Main;
 	unsigned TotalNSensors = GetTotalNumberOfSensors(Sensors);
-	NCurses_Input InputHandler(TotalNSensors,3);
+	NCurses_Input InputHandler(5,6);
 	//Create UI and graph windows;
 	Main.CreateSubWindow("Graph",GetGraphSize(Main.GetSize()));
 	Main.CreateSubWindow("UI",GetUiSize(Main.GetSize()));
@@ -199,7 +197,8 @@ void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_
 		i = InputHandler.GetKey();
 		std::vector<SensorDetailLine> StepDetails = GetAllSensorDetails(Sensors,NameMap);
 
-		NCurses_Draw(Main,StepDetails,i == KEY_RESIZE);
+		NCurses_Draw(Main,StepDetails,InputHandler.GetCursor(), i == KEY_RESIZE);
+		InputHandler.ProcessKey(i);
 	}
 }
 

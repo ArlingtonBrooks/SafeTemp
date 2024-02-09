@@ -117,6 +117,13 @@ void PrintHeaders(SubWindow &Win) {
 	wprintw(Win.GetHandle().get(),Cmd);
 }
 
+void CheckSetAttribute(SubWindow &Win, Selection const &Cursor, int i, int j) {
+	if (Cursor.Row == i && Cursor.Col == j)
+		wattron(Win.GetHandle().get(),A_STANDOUT);
+	else
+		wattroff(Win.GetHandle().get(),A_STANDOUT);
+}
+
 void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t ScrollPoint, std::vector<SensorDetailLine> const &Opts) {
 	wmove(Win.GetHandle().get(),1,1);
 	unsigned nSensors = Opts.size();
@@ -127,14 +134,31 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
 	MinSensors = (MinSensors > Opts.size()) ? Opts.size() : MinSensors;
 	for (int i = 0; i != MinSensors; i++) {//auto const &i : Opts) 
 		unsigned SensorNumber = i + ScrollPoint;
-		mvwprintw(Win.GetHandle().get(), i+3, 1, "%8.2f | ",Opts[SensorNumber].TempData.Temp);
-		wprintw(Win.GetHandle().get(),"%-16s  | ",Opts[SensorNumber].FriendlyName.substr(0,16).c_str());
-		wprintw(Win.GetHandle().get(),"%8.2f | ",Opts[SensorNumber].CritTemp);
-		wprintw(Win.GetHandle().get(),"%6c | ",Opts[SensorNumber].Symbol);
-		wprintw(Win.GetHandle().get(),"%6d | ",(int)Opts[SensorNumber].Colour);
-		wprintw(Win.GetHandle().get(),"%s",Opts[SensorNumber].Command.substr(0,WSize.x - 60).c_str());
+		CheckSetAttribute(Win,Cursor,i,0);
+		mvwprintw(Win.GetHandle().get(), i+3, 1, "%8.2f",Opts[SensorNumber].TempData.Temp);
+		wattroff(Win.GetHandle().get(),A_STANDOUT);
+		wprintw(Win.GetHandle().get(),"  | ");
+		CheckSetAttribute(Win,Cursor,i,1);
+		wprintw(Win.GetHandle().get(),"%-16s",Opts[SensorNumber].FriendlyName.substr(0,16).c_str());
+		wattroff(Win.GetHandle().get(),A_STANDOUT);
+		wprintw(Win.GetHandle().get()," | ");
+		CheckSetAttribute(Win,Cursor,i,2);
+		wprintw(Win.GetHandle().get(),"%8.2f",Opts[SensorNumber].CritTemp);
+		wattroff(Win.GetHandle().get(),A_STANDOUT);
+		wprintw(Win.GetHandle().get()," | ");
+		CheckSetAttribute(Win,Cursor,i,3);
+		wprintw(Win.GetHandle().get(),"%6c",Opts[SensorNumber].Symbol);
+		wattroff(Win.GetHandle().get(),A_STANDOUT);
+		wprintw(Win.GetHandle().get()," | ");
+		CheckSetAttribute(Win,Cursor,i,4);
+		wprintw(Win.GetHandle().get(),"%6d",(int)Opts[SensorNumber].Colour);
+		wattroff(Win.GetHandle().get(),A_STANDOUT);
+		wprintw(Win.GetHandle().get()," | ");
+		CheckSetAttribute(Win,Cursor,i,5);
+		wprintw(Win.GetHandle().get()," %s ",Opts[SensorNumber].Command.substr(0,WSize.x - 60).c_str());
 		if (60 + Opts[SensorNumber].Command.length() > WSize.x - 8)
 			wprintw(Win.GetHandle().get(),"...");
+		wattroff(Win.GetHandle().get(),A_STANDOUT);
 	}
 	if (Opts.size() > MinSensors) {
 		mvwprintw(Win.GetHandle().get(), WSize.y-2, 1, "%-8s | ","(...)");
@@ -160,6 +184,7 @@ void NCursesPrintGraphAxes(SubWindow &Win/*, float MaxTemp, float MinTemp, std::
 	const char TimeText[] = "Time";
 	int loc_y = WSize.y / 2 - sizeof(TempText) / 2;
 	int loc_x = WSize.x / 2 - sizeof(TimeText) / 2;
+	wattron(Win.GetHandle().get(),A_BOLD);
 	for (auto const &c : TempText) {
 		mvwprintw(Win.GetHandle().get(),loc_y++,2,"%c",c);
 	}
@@ -168,6 +193,7 @@ void NCursesPrintGraphAxes(SubWindow &Win/*, float MaxTemp, float MinTemp, std::
 	whline(Win.GetHandle().get(),0,WSize.x - 8);
 	wmove(Win.GetHandle().get(),2,12);
 	wvline(Win.GetHandle().get(),0,WSize.y-4);
+	wattroff(Win.GetHandle().get(),A_BOLD);
 }
 
 void NCursesPrintGraphToWindow(SubWindow &Win, std::vector<SensorDetailLine> const &Opts, unsigned dtime = 0) {
@@ -186,6 +212,7 @@ public:
 		set_handle(std::shared_ptr<WINDOW>(initscr(),[](WINDOW* win){endwin();}));
 		cbreak();
 		noecho();
+		keypad(GetHandle().get(),true);
 		curs_set(0);
 		timeout(128);
 	}
