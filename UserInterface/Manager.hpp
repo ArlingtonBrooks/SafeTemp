@@ -54,33 +54,38 @@ protected:
 			break;
 		}
 		case Key::Up: {
-			if (Cursor.Row == 0) {}
+			if (Cursor.Row == 0) {if (Scroll > 0) Scroll -= 1;}
 			else { Cursor.Row -= 1; }
 			break;
 		}
 		case Key::Down: {
-			if (Cursor.Row == NRows - 1) {}
+			if (Cursor.Row == NRows - 1) {if (Scroll < MaxScroll) Scroll += 1;}
 			else { Cursor.Row += 1; }
 			break;
 		}
 		}
 	}
 	Selection Cursor;
+	unsigned MaxScroll = 0;
+	unsigned Scroll = 0;
 	int NRows = 0;
 	int NCols = 0;
 	void set_nrows(int nrow) {NRows = nrow;}
 	void set_ncols(int ncol) {NCols = ncol;}
+	void set_maxscroll(unsigned scroll) {MaxScroll = scroll;}
 public:
 	virtual int GetKey() = 0;
 	virtual int ProcessKey(int Keyval) = 0;
 	virtual Selection GetCursor() const {return Cursor; }
+	virtual unsigned GetScroll() const {return Scroll; }
 };
 
 class NCurses_Input : public Input {
 public:
-	NCurses_Input(int tNRows, int tNCols) {
+	NCurses_Input(int tNRows, int tNCols, int tMaxScroll) {
 		set_nrows(tNRows);
 		set_ncols(tNCols);
+		set_maxscroll(tMaxScroll);
 	}
 	
 	virtual int GetKey() override {

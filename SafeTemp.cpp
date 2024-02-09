@@ -157,7 +157,7 @@ Rect<int> GetUiSize(WinSize const &MainWindowSize)
 	return UiSize;
 }
 
-void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorDetails, Selection Cursor, bool Resize) {
+void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorDetails, Selection Cursor, unsigned Scroll, bool Resize) {
 	WinSize MainWindowSize = Main.GetSize();
 	if (Resize) {
 		Main.GetSubWindow("Graph").Resize(GetGraphSize(MainWindowSize));
@@ -165,13 +165,14 @@ void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorD
 		if (MainWindowSize.y >= 24) Main.RedrawAll();
 	}
 	NCursesPrintGraphAxes(Main.GetSubWindow("Graph"));
-	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),Cursor,0,SensorDetails);
+	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),Cursor,Scroll,SensorDetails);
 	Main.Draw();
 	if (MainWindowSize.y < 24 || MainWindowSize.x < 50) {
 		Main.PrintString(MainWindowSize.y/2,MainWindowSize.x/2-10,"Window size too small");
 		Main.Refresh();
 	} else {
 		mvwprintw(Main.GetSubWindow("Graph").GetHandle().get(),0,0,"  Plot of Temperature VS Time  ");
+mvwprintw(Main.GetSubWindow("Graph").GetHandle().get(),0,0," Scroll: %u",Scroll);
 		Main.RefreshAll();
 	}
 }
@@ -187,17 +188,17 @@ static unsigned GetTotalNumberOfSensors(std::vector<std::shared_ptr<temperature_
 void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_sensor_set>> &Sensors, std::unordered_map<std::string,SensorDetailLine> const &NameMap) {
 	MainWindow Main;
 	unsigned TotalNSensors = GetTotalNumberOfSensors(Sensors);
-	NCurses_Input InputHandler(5,6);
 	//Create UI and graph windows;
 	Main.CreateSubWindow("Graph",GetGraphSize(Main.GetSize()));
 	Main.CreateSubWindow("UI",GetUiSize(Main.GetSize()));
+	NCurses_Input InputHandler(5,6,(TotalNSensors < 5) ? 0 : TotalNSensors - 5);
 	Main.RefreshAll();
 	int i = 0;
 	while (i != 'q') { //step
 		i = InputHandler.GetKey();
 		std::vector<SensorDetailLine> StepDetails = GetAllSensorDetails(Sensors,NameMap);
 
-		NCurses_Draw(Main,StepDetails,InputHandler.GetCursor(), i == KEY_RESIZE);
+		NCurses_Draw(Main,StepDetails,InputHandler.GetCursor(), InputHandler.GetScroll(), i == KEY_RESIZE);
 		InputHandler.ProcessKey(i);
 	}
 }
@@ -227,7 +228,7 @@ int main(int argc,char** argv)
 
 	std::vector<std::shared_ptr<temperature_sensor_set>> AllSensors;
 #if UI_TEST
-	AllSensors.emplace_back(std::make_shared<test_sensor>(15));
+	AllSensors.emplace_back(std::make_shared<test_sensor>(10));
 #else
 	AllSensors.emplace_back(std::make_shared<lm_sensor>(nullptr));
 #endif

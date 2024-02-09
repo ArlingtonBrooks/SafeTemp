@@ -128,7 +128,6 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
 	wmove(Win.GetHandle().get(),1,1);
 	unsigned nSensors = Opts.size();
 	WinSize WSize = Win.GetSize();
-	ScrollPoint = std::min(ScrollPoint,Opts.size()-WSize.y - 5);
 	PrintHeaders(Win);
 	unsigned MinSensors = WSize.y - 5;
 	MinSensors = (MinSensors > Opts.size()) ? Opts.size() : MinSensors;
@@ -160,13 +159,16 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
 			wprintw(Win.GetHandle().get(),"...");
 		wattroff(Win.GetHandle().get(),A_STANDOUT);
 	}
-	if (Opts.size() > MinSensors) {
+	if (Opts.size() > MinSensors && (MinSensors + ScrollPoint) != Opts.size()) {
 		mvwprintw(Win.GetHandle().get(), WSize.y-2, 1, "%-8s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%-16s  | ","  (...)  ");
 		wprintw(Win.GetHandle().get(), "%-8s | "," (...) ");
 		wprintw(Win.GetHandle().get(), "%-6s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%-6s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%s "," (...) ");
+	}
+	else {
+		mvwprintw(Win.GetHandle().get(),WSize.y-2,1,"%-79s"," ");
 	}
 	if (ScrollPoint > 0) {
 		mvwprintw(Win.GetHandle().get(), 2, 1, "%-8s | ","(...)");
@@ -175,6 +177,9 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
 		wprintw(Win.GetHandle().get(), "%-6s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%-6s | ","(...)");
 		wprintw(Win.GetHandle().get(), "%s "," (...) ");
+	}
+	else {
+		mvwprintw(Win.GetHandle().get(),2,1,"%-79s"," ");
 	}
 }
 

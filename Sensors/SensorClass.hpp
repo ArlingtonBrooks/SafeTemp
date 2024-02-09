@@ -27,7 +27,7 @@ private:
 public:
 	test_sensor(unsigned num) {
 		const unsigned NCharSet = sizeof(CharSet) - 1;
-        	for (unsigned j = 0; j != 20; j++) {
+        	for (unsigned j = 0; j != num; j++) {
 			std::string SensorName = "";
 		        for (unsigned i = 0; i != 12; i++) { //Generate random sensor names
 		                unsigned idx = NCharSet % (i % (j+1) + 1);
