@@ -137,7 +137,7 @@ void CheckSetAttribute(SubWindow &Win, Selection const &Cursor, int i, int j) {
  * @param ScrollPoint    Where the user's cursor is scrolled to in the UI (for lists of sensors greater than 5)
  * @param Opts           List of current SensorDetailLine objects to be printed
  */
-void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t ScrollPoint, std::vector<SensorDetailLine> const &Opts) {
+void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t ScrollPoint, std::vector<SensorPreferences> const &Opts) {
 	wmove(Win.GetHandle().get(),1,1);
 	unsigned nSensors = Opts.size();
 	WinSize WSize = Win.GetSize();
@@ -147,28 +147,28 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
 	for (int i = 0; i != MinSensors; i++) {//auto const &i : Opts) 
 		unsigned SensorNumber = i + ScrollPoint;
 		CheckSetAttribute(Win,Cursor,i,0);
-		mvwprintw(Win.GetHandle().get(), i+3, 1, "%8.2f",Opts[SensorNumber].TempData.Temp);
+		mvwprintw(Win.GetHandle().get(), i+3, 1, "%8.2f",Opts[SensorNumber].GetTempData().Temp);
 		wattroff(Win.GetHandle().get(),A_STANDOUT);
 		wprintw(Win.GetHandle().get(),"  | ");
 		CheckSetAttribute(Win,Cursor,i,1);
-		wprintw(Win.GetHandle().get(),"%-16s",Opts[SensorNumber].FriendlyName.substr(0,16).c_str());
+		wprintw(Win.GetHandle().get(),"%-16s",Opts[SensorNumber].GetFriendlyName().substr(0,16).c_str());
 		wattroff(Win.GetHandle().get(),A_STANDOUT);
 		wprintw(Win.GetHandle().get()," | ");
 		CheckSetAttribute(Win,Cursor,i,2);
-		wprintw(Win.GetHandle().get(),"%8.2f",Opts[SensorNumber].CritTemp);
+		wprintw(Win.GetHandle().get(),"%8.2f",Opts[SensorNumber].GetCriticalTemp());
 		wattroff(Win.GetHandle().get(),A_STANDOUT);
 		wprintw(Win.GetHandle().get()," | ");
 		CheckSetAttribute(Win,Cursor,i,3);
-		wprintw(Win.GetHandle().get(),"%6c",Opts[SensorNumber].Symbol);
+		wprintw(Win.GetHandle().get(),"%6c",Opts[SensorNumber].GetSymbol());
 		wattroff(Win.GetHandle().get(),A_STANDOUT);
 		wprintw(Win.GetHandle().get()," | ");
 		CheckSetAttribute(Win,Cursor,i,4);
-		wprintw(Win.GetHandle().get(),"%6d",(int)Opts[SensorNumber].Colour);
+		wprintw(Win.GetHandle().get(),"%6d",(int)Opts[SensorNumber].GetColour());
 		wattroff(Win.GetHandle().get(),A_STANDOUT);
 		wprintw(Win.GetHandle().get()," | ");
 		CheckSetAttribute(Win,Cursor,i,5);
-		wprintw(Win.GetHandle().get()," %s ",Opts[SensorNumber].Command.substr(0,WSize.x - 60).c_str());
-		if (60 + Opts[SensorNumber].Command.length() > WSize.x - 8)
+		wprintw(Win.GetHandle().get()," %s ",Opts[SensorNumber].GetCommand().substr(0,WSize.x - 60).c_str());
+		if (60 + Opts[SensorNumber].GetCommand().length() > WSize.x - 8)
 			wprintw(Win.GetHandle().get(),"...");
 		wattroff(Win.GetHandle().get(),A_STANDOUT);
 	}
@@ -202,22 +202,24 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
  * @param MinTime The minimum time to be printed
  * @param MaxTime The maximum time to be printed
  */
-void NCursesPrintTimeAxis(SubWindow &Win, unsigned const Ticks, std::time_t const &MinTime, std::time_t const &MaxTime)
+void NCursesPrintTimeAxis(SubWindow &Win, unsigned const Ticks, std::time_t const &MinTime, std::time_t const &MaxTime, std::time_t const deltaTime)
 {
 	WinSize const WSize = Win.GetSize();
 	unsigned const Widths = 10;
 	double const tMinTime = (double)MinTime;
 	double const tMaxTime = (double)MaxTime;
-	double const dTime = tMaxTime - tMinTime;
+	double FixedMinTime = tMaxTime - (WSize.x - 2 - 12 - 10) * deltaTime;
+	FixedMinTime = (FixedMinTime < MinTime) ? MinTime : FixedMinTime;
+	double const dTime = tMaxTime - FixedMinTime;
 	double const n_times = (double)Ticks / (double)Widths - 1;
 	char TimeString[Widths];
 	tm *temporary;
 	mvwprintw(Win.GetHandle().get(),WSize.y-3,8,"");
 	if (dTime / n_times <= 0) {
-		wprintw(Win.GetHandle().get(), "(collecting data)");
+		mvwprintw(Win.GetHandle().get(),WSize.y/2, WSize.x/2-10, "(collecting data)");
 		return;
 	}
-	for (double i = tMinTime; i < tMaxTime; i += dTime / n_times) {
+	for (double i = FixedMinTime; i < tMaxTime; i += dTime / n_times) {
 		std::time_t CurTime = (std::time_t)(i);
 		temporary = localtime(&CurTime);
 		strftime(TimeString,10,"%T",temporary);
@@ -250,7 +252,7 @@ void NCursesPrintTempAxis(SubWindow &Win, unsigned const Ticks, float const MinT
  * @param MinTime  Minimum time to be printed
  * @param MaxTime  Maximum time to be printed
  */
-void NCursesPrintGraphAxes(SubWindow &Win, float const MinTemp, float const MaxTemp, std::time_t const MinTime, std::time_t const MaxTime) 
+void NCursesPrintGraphAxes(SubWindow &Win, float const MinTemp, float const MaxTemp, std::time_t const MinTime, std::time_t const MaxTime, std::time_t const dTime) 
 {
 	wclear(Win.GetHandle().get());
 	WinSize const WSize = Win.GetSize();
@@ -268,7 +270,7 @@ void NCursesPrintGraphAxes(SubWindow &Win, float const MinTemp, float const MaxT
 	wmove(Win.GetHandle().get(),2,12); //start at 2,12
 	wvline(Win.GetHandle().get(),0,WSize.y-4);
 	wattroff(Win.GetHandle().get(),A_BOLD);
-	NCursesPrintTimeAxis(Win, WSize.x - 2 - 12,MinTime,MaxTime);
+	NCursesPrintTimeAxis(Win, WSize.x - 2 - 12,MinTime,MaxTime,dTime);
 	NCursesPrintTempAxis(Win, WSize.y - 4 - 2, MinTemp, MaxTemp);
 }
 
@@ -277,8 +279,18 @@ void NCursesPrintGraphAxes(SubWindow &Win, float const MinTemp, float const MaxT
  * @param Opts    The data to be printed
  * @TODO: I would like to make the graph axes adjustable; it would be nice if this were the only function call to be made.
  */
-void NCursesPrintGraphToWindow(SubWindow &Win, std::vector<SensorDetailLine> const &Opts, unsigned dtime = 0) {
-	//todo
+void NCursesPrintGraphToWindow(SubWindow &Win, std::vector<SensorDetailLine> const &Opts, float const MinTemp, float const MaxTemp, std::time_t const MinTime, std::time_t const MaxTime, unsigned const dTime = 0) {
+	if (dTime == 0) return;
+	WinSize const WSize = Win.GetSize();
+	
+	std::time_t FixedMinTime = MaxTime - (WSize.x - 2 - 12 - 10) * dTime;
+	FixedMinTime = (FixedMinTime < MinTime) ? MinTime : FixedMinTime;
+	for (auto const &i : Opts) {
+		if (i.Time < FixedMinTime) continue;
+		int loc_x = 12 + ceil(((float)((i.Time - FixedMinTime)) / (float)(MaxTime - FixedMinTime)) * (float)(WSize.x - 2 - 12 - 10));
+		int loc_y = WSize.y - 4 - ((i.TempData.Temp - MinTemp) / (MaxTemp - MinTemp)) * (WSize.y - 2);
+		mvwprintw(Win.GetHandle().get(),loc_y,loc_x,"%c",i.Symbol);
+	}
 }
 
 /**

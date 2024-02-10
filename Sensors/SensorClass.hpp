@@ -200,7 +200,41 @@ std::vector<SensorDetailLine> GetAllSensorDetails(std::vector<std::shared_ptr<te
 				SensorDetailLine SLine = IT->second;
 				SLine.TempData = j;
 				SLine.Time = tTime;
+				ret.push_back(SLine);
 				//SLine.Time = std::time(0);
+			}
+		}
+	}
+	return ret;
+}
+
+/** @brief Update UI temperature given sensor detail line vector */
+bool UpdateSensorPreferences(std::vector<SensorDetailLine> const &SDL, std::vector<SensorPreferences> &Prefs)
+{
+	if (SDL.size() != Prefs.size())
+		return false;
+	for (unsigned i = 0; i != SDL.size(); i++) {
+		Prefs[i].SetTempData(SDL[i].TempData);
+	}
+	return true;
+}
+
+/** @brief Build a vector of user preferennces using a vector of sensors
+ * @note: does not load preferences from file
+ */
+std::vector<SensorPreferences> BuildPreferences(std::vector<std::shared_ptr<temperature_sensor_set>> const Sensors, std::unordered_map<std::string,SensorDetailLine> const &BasicSensorMap) {
+	std::vector<SensorPreferences> ret;
+	for (auto const &i : Sensors) {
+		std::vector<TempPair> TP = Sensors.back()->GetAllTemperatures();
+		for (auto const &j : TP) {
+			auto const IT = BasicSensorMap.find(j.Name);
+			if (IT == BasicSensorMap.end()) {
+				ret.emplace_back(j.Name);
+				ret.back().SetTempData(j);
+			} else {
+				ret.emplace_back(IT->second.TempData.Name);
+				ret.back().SetFriendlyName(IT->second.FriendlyName);
+				ret.back().SetTempData(j);
 			}
 		}
 	}

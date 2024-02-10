@@ -165,7 +165,7 @@ Rect<int> GetUiSize(WinSize const &MainWindowSize)
  * @param Scroll          User's current scroll value in the UI
  * @param Resize          Whether the window needs to be redrawn after a resize operation
  */
-void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorDetails, std::vector<SensorDetailLine> const &SensorHistory, Selection Cursor, unsigned Scroll, bool Resize) {
+void NCurses_Draw(MainWindow &Main, std::vector<SensorPreferences> const &SensorPrefs, std::vector<SensorDetailLine> const &SensorHistory, Selection Cursor, unsigned Scroll, bool Resize) {
 	WinSize MainWindowSize = Main.GetSize();
 	if (Resize) {
 		Main.GetSubWindow("Graph").Resize(GetGraphSize(MainWindowSize));
@@ -176,8 +176,16 @@ void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorD
 	                      GetMinTemp(SensorHistory.begin(),SensorHistory.end()),
 	                      GetMaxTemp(SensorHistory.begin(),SensorHistory.end()),
 	                      GetMinTime(SensorHistory.begin(),SensorHistory.end()),
-	                      GetMaxTime(SensorHistory.begin(),SensorHistory.end()));
-	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),Cursor,Scroll,SensorDetails);
+	                      GetMaxTime(SensorHistory.begin(),SensorHistory.end()),
+	                      3);
+	NCursesPrintGraphToWindow(Main.GetSubWindow("Graph"), //TODO: move this to NCursesPrintGraphToWindow function call
+	                      SensorHistory,
+	                      GetMinTemp(SensorHistory.begin(),SensorHistory.end()),
+	                      GetMaxTemp(SensorHistory.begin(),SensorHistory.end()),
+	                      GetMinTime(SensorHistory.begin(),SensorHistory.end()),
+	                      GetMaxTime(SensorHistory.begin(),SensorHistory.end()),
+	                      3); //TODO should be variable
+	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),Cursor,Scroll,SensorPrefs);
 	Main.Draw();
 	if (MainWindowSize.y < 24 || MainWindowSize.x < 50) {
 		Main.PrintString(MainWindowSize.y/2,MainWindowSize.x/2-10,"Window size too small");
@@ -209,13 +217,16 @@ void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_
 	std::time_t LastTime;
 	time(&LastTime);
 	std::vector<SensorDetailLine> StepDetails = GetAllSensorDetails(Sensors,NameMap);
+	std::vector<SensorPreferences> SensorPref = BuildPreferences(Sensors,NameMap);
 	while (i != 'q') { //step
 		i = InputHandler.GetKey();
+		std::vector<SensorDetailLine> LocalStepDetails = GetAllSensorDetails(Sensors,NameMap);
 		std::time_t CurrentTime;
 		time(&CurrentTime);
-		std::vector<SensorDetailLine> LocalStepDetails = GetAllSensorDetails(Sensors,NameMap);
-		NCurses_Draw(Main,LocalStepDetails,StepDetails,InputHandler.GetCursor(), InputHandler.GetScroll(), i == KEY_RESIZE);
-		if (CurrentTime - LastTime > 1) {
+		if (!UpdateSensorPreferences(LocalStepDetails,SensorPref))
+			return;
+		NCurses_Draw(Main,SensorPref,StepDetails,InputHandler.GetCursor(), InputHandler.GetScroll(), i == KEY_RESIZE);
+		if (CurrentTime - LastTime >= 3) {
 			LastTime = CurrentTime;
 			StepDetails.insert(StepDetails.end(),LocalStepDetails.begin(),LocalStepDetails.end());
 		}

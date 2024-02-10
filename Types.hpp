@@ -14,6 +14,12 @@ struct TempPair {
 	float Temp;       ///<Sensor temperature
 };
 
+/** @brief A simple data point for plotting */
+struct SensorLine {
+	TempPair TempData;
+	std::time_t Time;
+};
+
 /** @brief A data structure for a point on the chart to be plotted */
 struct SensorDetailLine {
 	std::time_t Time;          ///<Time of current reading
@@ -70,13 +76,38 @@ private:
 	std::string m_SensorName = "";
 	std::string m_FriendlyName = "";
 	std::string m_Command;
-	float m_CriticalTemp;
+	TempPair TempData;         ///<Temperature data
+	float m_CriticalTemp;      ///<The critical temperature
+	char m_Symbol;             ///<The symbol to print
+	unsigned char m_Colour;    ///<The colour to be printed
 public:
 	SensorPreferences(std::string const &RawName) {
 		m_SensorName = RawName;
 		m_FriendlyName = m_SensorName;
 		m_Command = "";
 		m_CriticalTemp = -273.15;
+		m_Symbol = '*';
+		m_Colour = 0;
+		TempData.Name = RawName;
+		TempData.Temp = 0;
+	}
+	void SetTempData(TempPair const &Data) {
+		TempData = Data;
+	}
+	TempPair GetTempData() const {
+		return TempData;
+	}
+	void SetSymbol(char Symbol) {
+		m_Symbol = Symbol;
+	}
+	char GetSymbol() const {
+		return m_Symbol;
+	}
+	void SetColour(unsigned char Colour) {
+		m_Colour = Colour;
+	}
+	unsigned char GetColour() const {
+		return m_Colour;
 	}
 	void SetFriendlyName(std::string const &NewName) {
 		m_FriendlyName = NewName;
