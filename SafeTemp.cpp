@@ -64,7 +64,6 @@ PLANNED UPDATES:
 #endif
 
 #include "UserInterface/Manager.hpp"
-#include "UserInterface/Graph.hpp"
 #include "UserInterface/UI.hpp"
 #include "UserInterface/GTKInterface.hpp"
 #include "Sensors/SensorClass.hpp"
@@ -269,7 +268,7 @@ int main(int argc,char** argv)
 		return 0;
 	}
 
-	return -5; //Temporary; don't go beyond this.
+	//return -5; //Temporary; don't go beyond this.
 	/* Statistics variables */
 	vector<vector<time_t>> X_pts;
 	vector<vector<double>> Y_pts;
@@ -328,10 +327,6 @@ int main(int argc,char** argv)
 		for (int i = 0; i < nvDev.size(); i++) SensorNames.push_back("NVidia Device");
 	}*/
 #endif
-	Manager WM;
-	int WM_Graph = WM.AddWin(0,0,WM.MAIN->_maxx,(int)((float)WM.MAIN->_maxy/2.0)-2,1,0);
-	int WM_Data = WM.AddWin(0,(int)((float)WM.MAIN->_maxy/2.0)+2,WM.MAIN->_maxx,(int)((float)WM.MAIN->_maxy/2.0)-1,0,1);
-	Graph GP(&WM.Wins[WM_Graph],0,0,10,40,{9,2,WM.MAIN->_maxx-12,(int)((float)WM.MAIN->_maxy/2.0)-7});
 #if HAVE_LIBNVIDIA_ML
 	static_assert(false,"Nvidia ML has been temporarily disabled");
 	/*for (int i = 0; i < ChipNames.size()+nvDev.size(); i++)
@@ -339,32 +334,7 @@ int main(int argc,char** argv)
 		GP.InitDataset();
 	}*/
 #endif
-	UserInterface UI(&WM.Wins[WM_Data],&GP);
-	if (Sensors.GetNumberOfSensors() != InArgs.MaxTemps.size())
-	{
-		for (unsigned i = 0; i < Sensors.GetNumberOfSensors(); i++) {
-			InArgs.MaxTemps.push_back(0);
-		}
-	}
-	if (!UI.SetupValues(Sensors.GetNumberOfSensors(), SensorNames, InArgs.MaxTemps) && InArgs.UseUI)
-	{
-		endwin();
-		std::cerr << "ERROR: User Interface could not be configured.  Exiting...\n";
-		std::cerr << "\tNumberOfSensors: " << SensorNames.size() << "\n\tNumber of Critical Temperatures: " << InArgs.MaxTemps.size() << "\n";
-		return -1;
-	}
-	if (InArgs.UseUI)
-	{
-		if (!ReadConfig(&UI,SensorNames.size(),InArgs))
-		{
-			endwin();
-			std::cerr << "Error loading config file ~/.config/TempSafe.cfg.  Exiting...\n";
-		}
-	}
 	int CharBuffer = 0;
-	if (!InArgs.UseUI) endwin();
-	if (InArgs.UseUI) nodelay(stdscr,1);
-
 #if HAVE_GTK == 1 && HAVE_GNUPLOT == 1
 	std::thread GTKMain;
 	if (InArgs.UseGUI)
@@ -393,47 +363,14 @@ int main(int argc,char** argv)
 		while (true)
 		{
 			/* Loop through all available sensors and perform relevant actions */
-			if (!InArgs.UseUI && !InArgs.UseGUI)
+			if (InArgs.UseUI)//UseUI OR UseGUI
 			{
-				for (unsigned i = 0; i < ChipNames.size(); i++)
-				{
-					val = Sensors.GetTemperature(ChipNames[i]);
-					if (InArgs.Stats) X_pts[i].push_back(time(NULL));
-					if (InArgs.Stats) Y_pts[i].push_back(val);
-					if (InArgs.PrtTmp) std::cout << "Sensor " << i << ": " << val << "\n";
-					ProcessTemp(i,val,InArgs);
-				}
-#if HAVE_LIBNVIDIA_ML
-	static_assert(false,"Nvidia ML has been temporarily disabled");
-				/*if (nv) //NVIDIA GPU data
-				{
-					//Loop through all nvidia chips and perform relevant actions
-					for (int i = 0; i < nvDev.size(); i++)
-					{
-						if (nvmlDeviceGetTemperature(nvDev[i],NVML_TEMPERATURE_GPU,&nvTempTmp) != NVML_SUCCESS) fprintf(stderr,"Failed to read temperature from NVIDIA chip (%d)\n",ChipNames.size());
-						val = (double)nvTempTmp;
-						//NV_CTRL_THERMAL_SENSOR_READING;
-						if (InArgs.Stats) X_pts[ChipNames.size() + i].push_back(time(NULL));
-						if (InArgs.Stats) Y_pts[ChipNames.size() + i].push_back(val);
-						if (InArgs.Stats && Y_pts[ChipNames.size() + i].size() >= 2) Yp_pts[ChipNames.size() + i].push_back(deriv(Y_pts[ChipNames.size() + i][Y_pts.size()-2],Y_pts[ChipNames.size() + i][Y_pts[ChipNames.size() + i].size()-1],InArgs.TimeStep));
-						if (InArgs.Stats && Yp_pts[ChipNames.size() + i].size() >= 2) Ypp_pts[ChipNames.size() + i].push_back(deriv(Yp_pts[ChipNames.size() + i][Yp_pts.size()-2],Yp_pts[ChipNames.size() + i][Yp_pts[ChipNames.size() + i].size()-1],InArgs.TimeStep));
-						if (InArgs.Stats) MaxTemp[ChipNames.size() + i] = EstMaxTemp(Y_pts[ChipNames.size() + i],Yp_pts[ChipNames.size() + i],Ypp_pts[ChipNames.size() + i],X_pts[ChipNames.size() + i],InArgs.StartTime);
-						if (InArgs.Stats) MaxTime[ChipNames.size() + i] = EstMaxTime(Y_pts[ChipNames.size() + i],Yp_pts[ChipNames.size() + i],Ypp_pts[ChipNames.size() + i],X_pts[ChipNames.size() + i],InArgs.StartTime);
-						if (InArgs.PrtTmp) printf("Sensor %d: %f\n",ChipNames.size() + i,val);
-						if (InArgs.PrtTmp && Stats && Ypp_pts[ChipNames.size() + i].size() >= 1) printf("Estimated max temperature is %f in %f seconds for sensor %d\n",MaxTemp[ChipNames.size() + i],MaxTime[ChipNames.size() + i],ChipNames.size() + i);
-						ProcessTemp(ChipNames.size() + i,val,InArgs);
-					}
-				}*/
-#endif
-			}
-			else if (InArgs.UseUI)//UseUI OR UseGUI
-			{
-				if (UI.TriggerSensors)
+				if (true)
 				{
 					for (unsigned i = 0; i < ChipNames.size(); i++)
 					{
 						GUI::Handle.AddData(Sensors.GetTemperature(ChipNames[i]),i);
-						UI.AppendSensorData(i,val,InArgs.TimeStep/1000000);
+						//UI.AppendSensorData(i,val,InArgs.TimeStep/1000000);
 					}
 #if HAVE_LIBNVIDIA_ML
 	static_assert(false,"Nvidia ML has been temporarily disabled");
@@ -453,7 +390,7 @@ int main(int argc,char** argv)
 				}
 			}
 #if HAVE_GTK == 1 && HAVE_GNUPLOT == 1
-			else if (InArgs.UseGUI)
+			if (InArgs.UseGUI)
 			{
 				if (GUI::Handle.GetTimeTrigger(InArgs.TimeStep/1000000))
 				{
@@ -482,45 +419,10 @@ int main(int argc,char** argv)
 			}
 #endif
 
-
 			if (InArgs.PrtTmp && !InArgs.UseUI) std::cout << "Finished Line\n";
 			if (!InArgs.run) break;
 
-			/* If User Interface is enabled, perform the required actions to process data */
-			if (InArgs.UseUI)
-			{ //FIXME: UI is broken somewhere in here;
-				UI.UpdateTimer(InArgs.TimeStep/1000000);
-				UI.TriggerDataGrab(InArgs.TimeStep/1000000);
-				CharBuffer = 0;
-				CharBuffer = getch();
-
-				if (CharBuffer == KEY_UP) UI.MoveCurs(4);
-				if (CharBuffer == KEY_DOWN) UI.MoveCurs(2);
-				if (CharBuffer == KEY_RIGHT) UI.MoveCurs(1);
-				if (CharBuffer == KEY_LEFT) UI.MoveCurs(3);
-				if (CharBuffer == '+') UI.TempAdjust(0);
-				if (CharBuffer == '-') UI.TempAdjust(1);
-				if (CharBuffer == KEY_ENTER || CharBuffer == '\n' || CharBuffer == '\r') UI.GetCommand();
-				if (CharBuffer == 'q') InArgs.run = 0;
-
-				WM.ClearBuffer(WM_Data);
-				if (UI.TriggerSensors)
-				{
-					WM.ClearBuffer(WM_Graph);
-					WM.Wins[WM_Graph].DrawAlignedText(ALIGN_BOTTOM_CENTER,"Time Since Program Start (seconds)",7,0);
-					WM.Wins[WM_Graph].DrawAlignedText(ALIGN__LEFT,"Temperature C",7,0);
-					WM.Wins[WM_Graph].DrawAlignedText(ALIGN_TOP_CENTER,"Temperature vs. Time",7,0);
-				}
-				WM.Wins[WM_Data].DrawAlignedText(ALIGN_TOP_CENTER,"-Main Menu- (tap q to exit)",0,7,A_BOLD & A_STANDOUT);
-				GP.DrawToWindow();
-				UI.draw();
-				move(WM.MAIN->_maxy,0);
-				WM.DrawWindows();
-
-			}
-
 			if (!InArgs.UseUI && !InArgs.UseGUI) usleep((int)(InArgs.TimeStep));
-			if (InArgs.UseUI && !InArgs.UseGUI) timeout(500);
 #if HAVE_GTK == 1 && HAVE_GNUPLOT == 1
 			if (InArgs.UseGUI) 
 			{
@@ -550,13 +452,6 @@ int main(int argc,char** argv)
 #endif
 	if (InArgs.File != NULL) fclose(InArgs.File);
 	if (InArgs.Temp != NULL) fclose(InArgs.Temp);
-	sensors_cleanup();
-	endwin();
-
-	if (InArgs.UseUI)
-	{
-		if (!WriteConfig(&UI,InArgs)) return -1;
-	}
 
 	return 0;
 }

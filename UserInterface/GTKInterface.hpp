@@ -474,9 +474,12 @@ namespace GUI
         {
             if (Handle.SensorActive[i])
             {
+                std::string SensorName = Handle.SensorNames[i];
+                std::replace(SensorName.begin(),SensorName.end(),':','_');
+                std::replace(SensorName.begin(),SensorName.end(),' ','_');
                 fprintf(Gnuplot,"set style line %d lc rgb '#%.6X' lw 3 pt 7\n",i+1,Handle.SensorColours[i]);
                 fflush(Gnuplot);
-                fprintf(Gnuplot,"$%s << EOD\n",Handle.SensorNames_NoSpace[i].c_str());
+                fprintf(Gnuplot,"$%s << EOD\n",SensorName.c_str());
                 fflush(Gnuplot);
                 for (int j = 0; j < Handle.SensorData[i].size(); j++) //TODO: LIMIT TO 249 DATAPOINTS
                 {
@@ -492,11 +495,18 @@ namespace GUI
         {
             if (Handle.SensorActive[i] && NoPlotmLine)
             {
-                fprintf(Gnuplot," plot $%s title \"%s\" with linespoints ls %d",Handle.SensorNames_NoSpace[i].c_str(),Handle.SensorNames[i].c_str(),i+1);
+                std::string SensorName = Handle.SensorNames[i];
+                std::replace(SensorName.begin(),SensorName.end(),':','_');
+                std::replace(SensorName.begin(),SensorName.end(),' ','_');
+                fprintf(Gnuplot," plot $%s title \"%s\" with linespoints ls %d",SensorName.c_str(),SensorName.c_str(),i+1);
                 NoPlotmLine = 0;
             }
-            else if (Handle.SensorActive[i])
-                fprintf(Gnuplot,", $%s title \"%s\" with linespoints ls %d",Handle.SensorNames_NoSpace[i].c_str(),Handle.SensorNames[i].c_str(),i+1);
+            else if (Handle.SensorActive[i]) {
+                std::string SensorName = Handle.SensorNames[i];
+                std::replace(SensorName.begin(),SensorName.end(),':','_');
+                std::replace(SensorName.begin(),SensorName.end(),' ','_');
+                fprintf(Gnuplot,", $%s title \"%s\" with linespoints ls %d",SensorName.c_str(),SensorName.c_str(),i+1);
+                }
         }
         fprintf(Gnuplot,"\n");
         fflush(Gnuplot);
