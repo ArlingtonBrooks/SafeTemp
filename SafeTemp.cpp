@@ -157,14 +157,26 @@ Rect<int> GetUiSize(WinSize const &MainWindowSize)
 	return UiSize;
 }
 
-void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorDetails, Selection Cursor, unsigned Scroll, bool Resize) {
+/** @brief Draw everything for NCurses
+ * @param Main            The main window
+ * @param SensorDetails   Information about the sensors (to be replaced with different structure)
+ * @param SensorHistory   Historical information about past sensor measurements
+ * @param Cursor          User's current UI selection
+ * @param Scroll          User's current scroll value in the UI
+ * @param Resize          Whether the window needs to be redrawn after a resize operation
+ */
+void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorDetails, std::vector<SensorDetailLine> const &SensorHistory, Selection Cursor, unsigned Scroll, bool Resize) {
 	WinSize MainWindowSize = Main.GetSize();
 	if (Resize) {
 		Main.GetSubWindow("Graph").Resize(GetGraphSize(MainWindowSize));
 		Main.GetSubWindow("UI").Resize(GetUiSize(MainWindowSize));
 		if (MainWindowSize.y >= 24) Main.RedrawAll();
 	}
-	NCursesPrintGraphAxes(Main.GetSubWindow("Graph"));
+	NCursesPrintGraphAxes(Main.GetSubWindow("Graph"), //TODO: move this to NCursesPrintGraphToWindow function call
+	                      GetMinTemp(SensorHistory.begin(),SensorHistory.end()),
+	                      GetMaxTemp(SensorHistory.begin(),SensorHistory.end()),
+	                      GetMinTime(SensorHistory.begin(),SensorHistory.end()),
+	                      GetMaxTime(SensorHistory.begin(),SensorHistory.end()));
 	NCursesPrintUiToWindow(Main.GetSubWindow("UI"),Cursor,Scroll,SensorDetails);
 	Main.Draw();
 	if (MainWindowSize.y < 24 || MainWindowSize.x < 50) {
@@ -172,7 +184,6 @@ void NCurses_Draw(MainWindow &Main, std::vector<SensorDetailLine> const &SensorD
 		Main.Refresh();
 	} else {
 		mvwprintw(Main.GetSubWindow("Graph").GetHandle().get(),0,0,"  Plot of Temperature VS Time  ");
-mvwprintw(Main.GetSubWindow("Graph").GetHandle().get(),0,0," Scroll: %u",Scroll);
 		Main.RefreshAll();
 	}
 }
@@ -185,6 +196,7 @@ static unsigned GetTotalNumberOfSensors(std::vector<std::shared_ptr<temperature_
 	return ret;
 }
 
+/** Main function for NCurses */
 void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_sensor_set>> &Sensors, std::unordered_map<std::string,SensorDetailLine> const &NameMap) {
 	MainWindow Main;
 	unsigned TotalNSensors = GetTotalNumberOfSensors(Sensors);
@@ -194,11 +206,19 @@ void RunNCurses(InputArguments &InArgs, std::vector<std::shared_ptr<temperature_
 	NCurses_Input InputHandler(5,6,(TotalNSensors < 5) ? 0 : TotalNSensors - 5);
 	Main.RefreshAll();
 	int i = 0;
+	std::time_t LastTime;
+	time(&LastTime);
+	std::vector<SensorDetailLine> StepDetails = GetAllSensorDetails(Sensors,NameMap);
 	while (i != 'q') { //step
 		i = InputHandler.GetKey();
-		std::vector<SensorDetailLine> StepDetails = GetAllSensorDetails(Sensors,NameMap);
-
-		NCurses_Draw(Main,StepDetails,InputHandler.GetCursor(), InputHandler.GetScroll(), i == KEY_RESIZE);
+		std::time_t CurrentTime;
+		time(&CurrentTime);
+		std::vector<SensorDetailLine> LocalStepDetails = GetAllSensorDetails(Sensors,NameMap);
+		NCurses_Draw(Main,LocalStepDetails,StepDetails,InputHandler.GetCursor(), InputHandler.GetScroll(), i == KEY_RESIZE);
+		if (CurrentTime - LastTime > 1) {
+			LastTime = CurrentTime;
+			StepDetails.insert(StepDetails.end(),LocalStepDetails.begin(),LocalStepDetails.end());
+		}
 		InputHandler.ProcessKey(i);
 	}
 }

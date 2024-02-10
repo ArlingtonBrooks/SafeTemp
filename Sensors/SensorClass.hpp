@@ -11,15 +11,21 @@
 
 #include "../Types.hpp"
 
+/** @brief Interface for temperature sensors */
 class temperature_sensor_set {
 public:
+	/** @brief Return a vector of all temperatures */
 	virtual std::vector<TempPair> GetAllTemperatures() = 0;
+	/** @brief Get a temperature for a specific sensor name (raw sensor name, not friendly) */
 	virtual float GetTemperature(std::string const &SensorName) = 0;
+	/** @brief Get the temperature of the sensor at the given index */
 	virtual float GetTemperature(unsigned index) = 0;
+	/** @brief Get the number of sensors stored in this object */
 	virtual unsigned GetNumberOfSensors() const = 0;
 	virtual ~temperature_sensor_set() = default;
 };
 
+/** @brief Test sensor class (reference implementation) */
 class test_sensor : public temperature_sensor_set {
 private:
 	char const CharSet[96] = "`1234567890-=~!@#$%^&*()_+qwertyuiop[]\\asdfghjkl;'zxcvbnm,./ QWERTYUIOP{}|ASDFGHJKL:\"ZXCVBNM<>?";
@@ -160,6 +166,7 @@ public:
 	}
 };
 
+/** @brief Creates an empty SensorDetailLine structure */
 SensorDetailLine CreateEmptySensorData(std::string const &Name) {
 	SensorDetailLine ret;
 	ret.Time = std::time(0);
@@ -171,8 +178,15 @@ SensorDetailLine CreateEmptySensorData(std::string const &Name) {
 	return ret;
 }
 
+/** @brief Gets all sensor readings from the sensors in the specified vector
+ * @param Sensors          Vector of all sensors which are to be considered
+ * @param BasicSensorMap   Map of all sensor names to their respective detail lines (translate name to object)
+ * @returns Vector of sensor details at the current time
+ */
 std::vector<SensorDetailLine> GetAllSensorDetails(std::vector<std::shared_ptr<temperature_sensor_set>> const Sensors, std::unordered_map<std::string,SensorDetailLine> const &BasicSensorMap) {
 	std::vector<SensorDetailLine> ret;
+	std::time_t tTime;
+	time(&tTime);
 	for (auto const &i : Sensors) {
 		std::vector<TempPair> TP = Sensors.back()->GetAllTemperatures();
 		for (auto const &j : TP) {
@@ -180,11 +194,13 @@ std::vector<SensorDetailLine> GetAllSensorDetails(std::vector<std::shared_ptr<te
 			if (IT == BasicSensorMap.end()) {
 				SensorDetailLine SLine = CreateEmptySensorData(j.Name);
 				SLine.TempData = j;
+				SLine.Time = tTime;
 				ret.push_back(SLine);
 			} else {
 				SensorDetailLine SLine = IT->second;
 				SLine.TempData = j;
-				SLine.Time = std::time(0);
+				SLine.Time = tTime;
+				//SLine.Time = std::time(0);
 			}
 		}
 	}

@@ -102,6 +102,7 @@ public:
 	}
 };
 
+/** @brief Print headers for ncurses UI to the supplied window */
 void PrintHeaders(SubWindow &Win) {
 	const char* CurrentTemp = "Curr. T";
 	const char* CriticalTemp = "Crit. T";
@@ -117,6 +118,12 @@ void PrintHeaders(SubWindow &Win) {
 	wprintw(Win.GetHandle().get(),Cmd);
 }
 
+/** @brief Set the A_STANDOUT attribute if the current draw location matches the cursor location
+ * @param Win        The window
+ * @param Cursor     The user's cursor location
+ * @param i          The row being tested
+ * @param j          The column being tested
+ */
 void CheckSetAttribute(SubWindow &Win, Selection const &Cursor, int i, int j) {
 	if (Cursor.Row == i && Cursor.Col == j)
 		wattron(Win.GetHandle().get(),A_STANDOUT);
@@ -124,6 +131,12 @@ void CheckSetAttribute(SubWindow &Win, Selection const &Cursor, int i, int j) {
 		wattroff(Win.GetHandle().get(),A_STANDOUT);
 }
 
+/** @brief Print the UI for the NCurses interface to the given subwindow
+ * @param Win            The window
+ * @param Cursor         The user's cursor location
+ * @param ScrollPoint    Where the user's cursor is scrolled to in the UI (for lists of sensors greater than 5)
+ * @param Opts           List of current SensorDetailLine objects to be printed
+ */
 void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t ScrollPoint, std::vector<SensorDetailLine> const &Opts) {
 	wmove(Win.GetHandle().get(),1,1);
 	unsigned nSensors = Opts.size();
@@ -183,8 +196,64 @@ void NCursesPrintUiToWindow(SubWindow &Win, Selection Cursor, std::size_t Scroll
 	}
 }
 
-void NCursesPrintGraphAxes(SubWindow &Win/*, float MaxTemp, float MinTemp, std::time_t MaxTime, std::time_t MinTime*/) {
-	WinSize WSize = Win.GetSize();
+/** @brief Print the time axis to the NCurses graph window
+ * @param Win     The window
+ * @param Ticks   The number of ticks across the X-axis
+ * @param MinTime The minimum time to be printed
+ * @param MaxTime The maximum time to be printed
+ */
+void NCursesPrintTimeAxis(SubWindow &Win, unsigned const Ticks, std::time_t const &MinTime, std::time_t const &MaxTime)
+{
+	WinSize const WSize = Win.GetSize();
+	unsigned const Widths = 10;
+	double const tMinTime = (double)MinTime;
+	double const tMaxTime = (double)MaxTime;
+	double const dTime = tMaxTime - tMinTime;
+	double const n_times = (double)Ticks / (double)Widths - 1;
+	char TimeString[Widths];
+	tm *temporary;
+	mvwprintw(Win.GetHandle().get(),WSize.y-3,8,"");
+	if (dTime / n_times <= 0) {
+		wprintw(Win.GetHandle().get(), "(collecting data)");
+		return;
+	}
+	for (double i = tMinTime; i < tMaxTime; i += dTime / n_times) {
+		std::time_t CurTime = (std::time_t)(i);
+		temporary = localtime(&CurTime);
+		strftime(TimeString,10,"%T",temporary);
+		wprintw(Win.GetHandle().get(), "%-10s", TimeString);
+	}
+}
+
+/** @brief Print the temperature axis to the NCurses graph window
+ * @param Win      The window
+ * @param Ticks    The number of temperature ticks to print
+ * @param MinTemp  The minimum of the temperature axis
+ * @param Maxtemp  The maximum of the temperature axis
+ */
+void NCursesPrintTempAxis(SubWindow &Win, unsigned const Ticks, float const MinTemp, float const MaxTemp)
+{
+	WinSize const WSize = Win.GetSize();
+	float const n_temps = (float)Ticks / 2.0f - 1.0f;
+	float const dTemp = (MaxTemp - MinTemp) / n_temps;
+	int iter = 0;
+	for (float i = MinTemp; i < MaxTemp + dTemp; i += dTemp) {
+		mvwprintw(Win.GetHandle().get(),WSize.y - 5 - 2*iter, 3, "%8.2f-", i);
+		iter += 1;
+	}
+}
+
+/** @brief Print the NCurses graph axes to the graph window
+ * @param Win      The window
+ * @param MinTemp  Minimum temp to be printed
+ * @param MaxTemp  Maximum temp to be printed
+ * @param MinTime  Minimum time to be printed
+ * @param MaxTime  Maximum time to be printed
+ */
+void NCursesPrintGraphAxes(SubWindow &Win, float const MinTemp, float const MaxTemp, std::time_t const MinTime, std::time_t const MaxTime) 
+{
+	wclear(Win.GetHandle().get());
+	WinSize const WSize = Win.GetSize();
 	const char TempText[] = "Temperature";
 	const char TimeText[] = "Time";
 	int loc_y = WSize.y / 2 - sizeof(TempText) / 2;
@@ -196,11 +265,18 @@ void NCursesPrintGraphAxes(SubWindow &Win/*, float MaxTemp, float MinTemp, std::
 	mvwprintw(Win.GetHandle().get(),WSize.y-2,loc_x,"%s",TimeText);
 	wmove(Win.GetHandle().get(),WSize.y-4,6);
 	whline(Win.GetHandle().get(),0,WSize.x - 8);
-	wmove(Win.GetHandle().get(),2,12);
+	wmove(Win.GetHandle().get(),2,12); //start at 2,12
 	wvline(Win.GetHandle().get(),0,WSize.y-4);
 	wattroff(Win.GetHandle().get(),A_BOLD);
+	NCursesPrintTimeAxis(Win, WSize.x - 2 - 12,MinTime,MaxTime);
+	NCursesPrintTempAxis(Win, WSize.y - 4 - 2, MinTemp, MaxTemp);
 }
 
+/** Print all sensor measures to the graph window
+ * @param Win     The window to print to
+ * @param Opts    The data to be printed
+ * @TODO: I would like to make the graph axes adjustable; it would be nice if this were the only function call to be made.
+ */
 void NCursesPrintGraphToWindow(SubWindow &Win, std::vector<SensorDetailLine> const &Opts, unsigned dtime = 0) {
 	//todo
 }
