@@ -1,13 +1,11 @@
 # SafeTemp: preventing overheating
 
-**NOTICE: Due to lack of upstream development for lm_sensors, especially as it relates to modern hardware releases such as AMD's Ryzen architecture, SafeTemp is no longer under active development.  Any bugs will continue to be fixed depending on their severity, however feature updates will no longer be pushed.**
-
-**NOTICE2: This software is spread out in its construction and does not correctly implement static libraries.  Code clarification and cleaning was intended to be completed in a future feature update, however should no longer be expected.**
+**As a "hello world" type program, this isn't very clean.  As of early 2024, I've spent a few days trying to clean it up, but without completely rewriting it there's only so much that can be done.  I've left an open request for anyone who wants to try and tackle a few tasks; otherwise, I'll be puttering away at this.  Don't expect rapid updates henceforth.**
 
 This software checks that your Linux system is operating at a safe temperature and optionally executes a command if it's not.  If the user does not specify a temperature threshold file, no temperature threshold is set and the program will not do anything (although if the -v modifier is used, the program will display the sensor temperatures)
 
-To install, run ./configure, then make, then (as root) make install
-If you want to compile with NVIDIA functionality, you'll need to install the NVML libraries; it is also possible that you'll need a copy of nvml.h in the local directory (which is not provided through this distribution).  See https://developer.nvidia.com/gpu-deployment-kit to install this library.
+To install, follow the usual cmake build procedure (or run `cmake build /path/to/build/directory` and then run `make` from within that directory). 
+If you want to compile with NVIDIA functionality, you'll need to install the NVML libraries; it is also possible that you'll need a copy of nvml.h in the local directory (which is not provided through this distribution).  See https://developer.nvidia.com/gpu-deployment-kit to install this library. **CURRENTLY NVIDIA FUNCTIONALITY IS COMMENTED OUT**
 
 to run, run ./tempsafe from the install directory
 
