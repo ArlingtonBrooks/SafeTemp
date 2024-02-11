@@ -592,7 +592,7 @@ namespace GUI
         ErrorValue = gtk_builder_add_from_file(Builder,"UserInterface/Main.ui",NULL);
         if (ErrorValue == 0)
         {
-            fprintf(stderr,"[UI Builder]: Unable to build user interface\n");
+            fprintf(stderr,"[UI Builder]: Unable to build user interface\n\n  MAKE SURE that the user interface schematic exists at \"./UserInterface/Main.ui\";");
             return;
         }
 
